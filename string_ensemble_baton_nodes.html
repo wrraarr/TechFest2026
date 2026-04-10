@@ -6,7 +6,7 @@
     <title>Play the Orchestra · Luddy TechFest 2026</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <script src="sample_maps.js"></script>
+    <script src="April10_Snapshot/sample_maps.js"></script>
     <script src="orchestra_dash.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -511,7 +511,7 @@
         "Minor": [0, 2, 3, 5, 7, 8, 10]
     };
 
-    let orchestra = new Orchestra("Strings");
+    let orchestra = new Orchestra("April10_Snapshot/Strings");
 
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -1225,17 +1225,27 @@
 
     document.getElementById("startBtn").addEventListener("click", async () => {
         const startBtn = document.getElementById("startBtn");
+        const originalLabel = "Start the Orchestra";
         startBtn.textContent = "Loading samples...";
-        state.registry = loadRegistry();
-        await initializeRegistry();
-        await Tone.start();
-        await orchestra.loadAll("forte");
-        Tone.Transport.start();
-        state.loaded = true;
-        initializePlayers();
-        applyBatonVolume();
-        refreshHarmony(false);
-        document.getElementById("overlay").style.display = "none";
+        startBtn.disabled = true;
+
+        try {
+            state.registry = loadRegistry();
+            await initializeRegistry();
+            await Tone.start();
+            await orchestra.loadAll("forte");
+            Tone.Transport.start();
+            state.loaded = true;
+            initializePlayers();
+            applyBatonVolume();
+            refreshHarmony(false);
+            document.getElementById("overlay").style.display = "none";
+            startBtn.textContent = originalLabel;
+        } catch (error) {
+            console.error("Failed to start orchestra", error);
+            startBtn.disabled = false;
+            startBtn.textContent = "Start failed - try again";
+        }
     });
 </script>
 </body>
