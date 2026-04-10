@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meet the Characters · Luddy TechFest 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --iu-crimson: #990000;
+            --iu-crimson-deep: #6f0000;
+            --iu-rose: #c54a4a;
+            --ink: #2e2323;
+            --ink-soft: #655454;
+            --paper: #f7f3ee;
+            --panel: rgba(255, 251, 246, 0.88);
+            --panel-border: rgba(118, 87, 87, 0.14);
+            --sand: #e8dcc7;
+            --gold: #d6b06a;
+            --sage: #7a9487;
+            --sky: #a9c6d8;
+            --shadow: rgba(61, 33, 33, 0.16);
+            /* ---- CARD ROUNDING CONTROL ---- */
+            --radius-panel: 10px;
+            --radius-card: 8px;
+            --radius-slot: 6px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "IBM Plex Sans", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(153, 0, 0, 0.10), transparent 26%),
+                radial-gradient(circle at 90% 18%, rgba(214, 176, 106, 0.18), transparent 24%),
+                linear-gradient(135deg, #f2ebe3 0%, #f7f3ee 48%, #efe6da 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.42;
+            background:
+                linear-gradient(rgba(153, 0, 0, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(153, 0, 0, 0.035) 1px, transparent 1px);
+            background-size: 32px 32px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 90%);
+        }
+
+        .nav {
+            position: fixed;
+            top: 18px;
+            left: 18px;
+            z-index: 30;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav a {
+            color: var(--ink);
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(118, 87, 87, 0.14);
+            background: rgba(255, 251, 246, 0.82);
+            box-shadow: 0 12px 28px rgba(61, 33, 33, 0.12);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+            gap: 18px;
+            padding: 88px 18px 18px;
+        }
+
+        .panel,
+        .stage {
+            border: 1px solid var(--panel-border);
+            border-radius: var(--radius-panel);
+            background: var(--panel);
+            backdrop-filter: blur(14px);
+            box-shadow: 0 24px 60px var(--shadow);
+            overflow: hidden;
+        }
+
+        .panel {
+            display: grid;
+            grid-template-rows: auto auto auto 1fr;
+        }
+
+        .section {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(118, 87, 87, 0.10);
+        }
+
+        .section:last-child {
+            border-bottom: 0;
+        }
+
+        .eyebrow {
+            margin: 0 0 10px;
+            color: var(--iu-crimson);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            font-family: "Newsreader", serif;
+            font-size: clamp(2rem, 4vw, 3.2rem);
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+            max-width: 9ch;
+        }
+
+        .lede {
+            margin-top: 14px;
+            color: var(--ink-soft);
+            line-height: 1.55;
+            max-width: 34ch;
+        }
+
+        .brand-shell {
+            display: grid;
+            gap: 10px;
+            margin: 18px 0 0;
+        }
+
+        .brand-slot {
+            padding: 14px 16px;
+            border-radius: var(--radius-slot);
+            border: 1px dashed rgba(153, 0, 0, 0.24);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.84), rgba(246, 238, 229, 0.94));
+        }
+
+        .brand-slot strong,
+        .brand-slot span {
+            display: block;
+        }
+
+        .brand-slot strong {
+            color: var(--iu-crimson);
+            font-size: 0.74rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .brand-slot span {
+            margin-top: 10px;
+            color: var(--ink-soft);
+            line-height: 1.5;
+            font-size: 0.94rem;
+        }
+
+        /* ---- Luddy branding overrides ---- */
+        .nav-lockup {
+            display: flex !important;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px 6px 10px !important;
+            margin-right: 4px;
+        }
+
+        .nav-lockup img {
+            display: block;
+            height: 30px;
+            width: auto;
+        }
+
+        .nav-lockup .nav-lockup-label {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.64rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            line-height: 1.2;
+            max-width: 10ch;
+        }
+
+        .brand-slot.lockup-slot-filled {
+            border-style: solid;
+            padding: 16px 18px;
+        }
+
+        .brand-slot.lockup-slot-filled img {
+            display: block;
+            width: 100%;
+            max-width: 260px;
+            height: auto;
+        }
+
+        .brand-slot.event-slot .event-title {
+            display: block;
+            margin-top: 8px;
+            font-family: "Newsreader", serif;
+            font-size: 1.08rem;
+            color: var(--ink);
+            letter-spacing: -0.02em;
+            font-weight: 600;
+        }
+
+        .brand-slot.event-slot .event-meta {
+            display: block;
+            margin-top: 6px;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 980px) {
+            .nav-lockup .nav-lockup-label {
+                display: none;
+            }
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        button {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 11px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(111, 0, 0, 0.10);
+        }
+
+        button.primary {
+            color: #fff8f5;
+            background: linear-gradient(135deg, var(--iu-crimson), var(--iu-crimson-deep));
+        }
+
+        button.secondary {
+            color: var(--ink);
+            background: rgba(255, 255, 255, 0.76);
+            border: 1px solid rgba(118, 87, 87, 0.15);
+        }
+
+        .status-grid,
+        .mini-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .stat,
+        .mini-card {
+            padding: 14px;
+            border-radius: var(--radius-card);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.80), rgba(248, 241, 233, 0.94));
+            border: 1px solid rgba(118, 87, 87, 0.10);
+        }
+
+        .stat-label,
+        .mini-label {
+            color: var(--ink-soft);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+        }
+
+        .stat-value {
+            margin-top: 8px;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .mini-value {
+            margin-top: 6px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .legend {
+            display: grid;
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            color: var(--ink-soft);
+            line-height: 1.45;
+        }
+
+        .swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            margin-top: 5px;
+            flex: 0 0 auto;
+        }
+
+        .registry-list {
+            display: grid;
+            gap: 10px;
+            max-height: 260px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .registry-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-card);
+            background: rgba(255, 255, 255, 0.62);
+            border: 1px solid rgba(118, 87, 87, 0.10);
+        }
+
+        .registry-meta strong,
+        .registry-meta span {
+            display: block;
+        }
+
+        .registry-meta strong {
+            font-size: 0.95rem;
+        }
+
+        .registry-meta span {
+            margin-top: 3px;
+            color: var(--ink-soft);
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.78rem;
+        }
+
+        .helper {
+            color: var(--ink-soft);
+            line-height: 1.5;
+        }
+
+        .stage {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            min-height: calc(100vh - 36px);
+        }
+
+        .stage-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(118, 87, 87, 0.10);
+            background:
+                linear-gradient(135deg, rgba(153, 0, 0, 0.06), rgba(214, 176, 106, 0.08));
+        }
+
+        .stage-header h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .stage-subtle {
+            margin-top: 4px;
+            color: var(--ink-soft);
+            font-size: 0.92rem;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.68);
+            border: 1px solid rgba(118, 87, 87, 0.10);
+            color: var(--ink);
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: #bc8f8f;
+            box-shadow: 0 0 0 5px rgba(188, 143, 143, 0.16);
+        }
+
+        .dot.live {
+            background: var(--sage);
+            box-shadow: 0 0 0 5px rgba(122, 148, 135, 0.20);
+        }
+
+        #viz {
+            width: 100%;
+            height: 100%;
+            min-height: 640px;
+        }
+
+        @media (max-width: 1080px) {
+            .page {
+                grid-template-columns: 1fr;
+            }
+
+            .stage {
+                min-height: 70vh;
+            }
+
+            .stage-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .pill-row {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav" aria-label="Primary">
+        <a href="index.html" class="nav-lockup" aria-label="Luddy TechFest home">
+            <img src="luddy_lockup_WEB_h1.png" alt="Luddy School of Informatics, Computing, and Engineering">
+            <span class="nav-lockup-label">TechFest 2026</span>
+        </a>
+        <a href="index.html">Home</a>
+        <a href="string_ensemble_baton_nodes.html">Orchestra</a>
+        <a href="microbit_luddy_characters.html">Characters</a>
+        <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+        <a href="control_worksheet.html">Worksheet</a>
+        <a href="microbit_code_monitor.html">Monitor</a>
+    </nav>
+
+    <main class="page">
+        <aside class="panel">
+            <section class="section">
+                <p class="eyebrow">Luddy TechFest · Station 02</p>
+                <h1>Meet the Micro:bit Crew</h1>
+                <p class="lede">Every micro:bit at this station is a little character on the big screen. Tilt yours left and right to make your character walk, shine a flashlight at it to make its glow grow, and press a button to give it a shout. The more of you that join in, the busier the commons gets.</p>
+                <div class="brand-shell">
+                    <div class="brand-slot lockup-slot-filled">
+                        <img src="luddy_lockup_WEB_h1.png" alt="Luddy School of Informatics, Computing, and Engineering">
+                    </div>
+                    <div class="brand-slot event-slot">
+                        <strong>Luddy TechFest · April 11, 2026</strong>
+                        <span class="event-title">Micro:bit Exploration &amp; Physical Computing</span>
+                        <span class="event-meta">A hands-on station from the Luddy School</span>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button class="primary" id="connectBtn" type="button">Connect Hub</button>
+                    <button class="secondary" id="simulateBtn" type="button">Start Demo</button>
+                    <button class="secondary" id="resetBtn" type="button">Reset View</button>
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="status-grid">
+                    <div class="stat">
+                        <div class="stat-label">Scene</div>
+                        <div class="stat-value" id="activeCount">0 active</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Average Light</div>
+                        <div class="stat-value" id="avgLight">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Latest Event</div>
+                        <div class="stat-value" id="latestEvent">Waiting</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Stream</div>
+                        <div class="stat-value" id="streamState">Offline</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="mini-grid">
+                    <div class="mini-card">
+                        <div class="mini-label">X Axis</div>
+                        <div class="mini-value">tilt west/east</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-label">Y Axis</div>
+                        <div class="mini-value">tilt forward/back</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-label">Glow</div>
+                        <div class="mini-value">ambient light</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-label">Badges</div>
+                        <div class="mini-value">buttons and gesture</div>
+                    </div>
+                </div>
+                <div class="legend" style="margin-top: 18px;">
+                    <div class="legend-item"><span class="swatch" style="background: var(--iu-crimson);"></span><span>Crimson characters just moved — that's your tilt or button landing on screen.</span></div>
+                    <div class="legend-item"><span class="swatch" style="background: var(--gold);"></span><span>Warm halos grow when there's more light around your micro:bit.</span></div>
+                    <div class="legend-item"><span class="swatch" style="background: var(--sage);"></span><span>Little blinks and bounces show gestures like shake or logo-up.</span></div>
+                </div>
+            </section>
+
+            <section class="section">
+                <p class="eyebrow">Who's Playing Right Now</p>
+                <div class="registry-list" id="registryList"></div>
+                <p class="helper" id="lastPacket" style="margin-top: 14px;">Waiting for the first move…</p>
+            </section>
+        </aside>
+
+        <section class="stage">
+            <div class="stage-header">
+                <div>
+                    <h2>The Commons</h2>
+                    <p class="stage-subtle">Each little character below is someone in the room with a micro:bit. Tilt yours and see which one moves.</p>
+                </div>
+                <div class="pill-row">
+                    <div class="pill"><span class="dot" id="liveDot"></span><span id="connectionLabel">Hub offline</span></div>
+                    <div class="pill"><span>Signal</span><span id="packetMode">JSON or pipe</span></div>
+                </div>
+            </div>
+            <div id="viz"></div>
+        </section>
+    </main>
+
+    <script>
+        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+        const REGISTRY_FILE_PATH = "registry.json";
+        const DEMO_IDS = ["SIM-1", "SIM-2", "SIM-3", "SIM-4", "SIM-5", "SIM-6"];
+        const FIELD_LIMIT = 980;
+        const CHARACTER_STYLES = [
+            { shell: "#f3b1a6", stripe: "#fff4e8", stroke: "#8b443a", badge: "#7f1d1d", glow: "rgba(243, 177, 166, 0.28)" },
+            { shell: "#94d2bd", stripe: "#ecfff7", stroke: "#25645a", badge: "#155e63", glow: "rgba(148, 210, 189, 0.28)" },
+            { shell: "#f6d365", stripe: "#fff8d6", stroke: "#8a5a00", badge: "#9a3412", glow: "rgba(246, 211, 101, 0.28)" },
+            { shell: "#9db8ff", stripe: "#edf2ff", stroke: "#3150a8", badge: "#4338ca", glow: "rgba(157, 184, 255, 0.28)" },
+            { shell: "#d8b4fe", stripe: "#faf0ff", stroke: "#7c3aed", badge: "#6d28d9", glow: "rgba(216, 180, 254, 0.28)" },
+            { shell: "#f9a8d4", stripe: "#fff0f8", stroke: "#be185d", badge: "#9d174d", glow: "rgba(249, 168, 212, 0.28)" }
+        ];
+
+        const state = {
+            chart: null,
+            nodes: new Map(),
+            registry: {},
+            projectiles: [],
+            simulationRunning: false,
+            simulationTimer: null,
+            renderTimer: null,
+            latestEvent: "Waiting",
+            blinkSeed: 0,
+            serial: {
+                port: null,
+                reader: null,
+                inputDone: null,
+                keepReading: false
+            }
+        };
+
+        const MICROBIT_USB_FILTERS = [
+            { usbVendorId: 0x0D28 }
+        ];
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function mapRange(value, inMin, inMax, outMin, outMax) {
+            const ratio = (value - inMin) / (inMax - inMin || 1);
+            return outMin + ratio * (outMax - outMin);
+        }
+
+        function normalizeBoolean(value) {
+            if (typeof value === "boolean") return value;
+            if (typeof value === "number") return value !== 0;
+            if (typeof value === "string") return value === "1" || value.toLowerCase() === "true";
+            return false;
+        }
+
+        function getElement(id) {
+            return document.getElementById(id);
+        }
+
+        function setText(id, value) {
+            const element = getElement(id);
+            if (element) element.textContent = value;
+        }
+
+        function loadRegistry() {
+            try {
+                const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveRegistry() {
+            window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+        }
+
+        function normalizeRegistryShape(parsed) {
+            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+                : {};
+
+            return Object.fromEntries(
+                Object.entries(candidate)
+                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
+                    .map(([serial, label]) => [serial, label.trim()])
+            );
+        }
+
+        async function loadRegistryFromFile() {
+            try {
+                const response = await fetch(`${REGISTRY_FILE_PATH}?v=${Date.now()}`, { cache: "no-store" });
+                if (!response.ok) return {};
+                const parsed = await response.json();
+                return normalizeRegistryShape(parsed);
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function displayNameFor(id) {
+            return state.registry[id] || id;
+        }
+
+        function isValidMicrobitSerial(id) {
+            if (DEMO_IDS.includes(id)) return true;
+            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
+            const numericId = Number(id);
+            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
+        }
+
+        function isAllowedDeviceId(id) {
+            return Boolean(state.registry[id]) || DEMO_IDS.includes(id);
+        }
+
+        function deriveVelocityFromTilt(value) {
+            if (!Number.isFinite(value) || Math.abs(value) < 180) return 0;
+            return clamp(mapRange(value, -2048, 2048, -0.9, 0.9), -0.9, 0.9);
+        }
+
+        function createNode(id) {
+            const seed = Math.abs([...id].reduce((sum, char) => sum + char.charCodeAt(0), 0));
+            const startX = mapRange((seed % 13) - 6, -6, 6, -420, 420);
+            const startY = mapRange((seed % 9) - 4, -4, 4, -320, 320);
+            const style = CHARACTER_STYLES[seed % CHARACTER_STYLES.length];
+            return {
+                id,
+                label: displayNameFor(id),
+                ax: mapRange((seed % 11) - 5, -5, 5, -650, 650),
+                ay: mapRange((seed % 7) - 3, -3, 3, -520, 520),
+                x: startX,
+                y: startY,
+                targetX: startX,
+                targetY: startY,
+                velocityX: 0,
+                velocityY: 0,
+                light: 90,
+                sound: 0,
+                compass: 0,
+                btnA: false,
+                btnB: false,
+                touch: false,
+                logo: false,
+                gesture: "idle",
+                pulse: 0,
+                palette: style,
+                bodyWidthBias: ((seed % 5) - 2) * 4,
+                bodyHeightBias: ((seed % 7) - 3) * 3,
+                cornerRadius: 8 + (seed % 10),
+                eyeType: ["round", "line", "square"][seed % 3],
+                stripeHeight: 8 + (seed % 4) * 2,
+                legSpread: 7 + (seed % 4) * 2,
+                antenna: seed % 2 === 0,
+                shakeUntil: 0,
+                blinkOffset: seed % 19,
+                lastUpdate: performance.now()
+            };
+        }
+
+        function ensureNode(id) {
+            if (!isAllowedDeviceId(id)) return null;
+            if (state.nodes.has(id)) return state.nodes.get(id);
+            const node = createNode(id);
+            state.nodes.set(id, node);
+            renderRegistryList();
+            return node;
+        }
+
+        function pruneNodes() {
+            for (const id of [...state.nodes.keys()]) {
+                if (!isAllowedDeviceId(id)) {
+                    state.nodes.delete(id);
+                }
+            }
+        }
+
+        function renderRegistryList() {
+            const list = getElement("registryList");
+            if (!list) return;
+            const entries = Object.entries(state.registry)
+                .sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+
+            const activeDemo = DEMO_IDS.filter(id => state.nodes.has(id))
+                .map(id => [id, displayNameFor(id)]);
+
+            const combined = [...entries];
+            for (const entry of activeDemo) {
+                if (!combined.some(item => item[0] === entry[0])) combined.push(entry);
+            }
+
+            if (!combined.length) {
+                list.innerHTML = '<div class="helper">No saved devices yet. Start the demo or connect the hub to populate the field.</div>';
+                return;
+            }
+
+            list.innerHTML = combined.map(([serial, label]) => `
+                <div class="registry-item">
+                    <div class="registry-meta">
+                        <strong>${escapeHtml(label)}</strong>
+                        <span>${escapeHtml(serial)}</span>
+                    </div>
+                    <span class="helper">${state.nodes.has(serial) ? "live" : "saved"}</span>
+                </div>
+            `).join("");
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function setConnectionState(connected, label) {
+            const dot = getElement("liveDot");
+            if (dot) dot.classList.toggle("live", connected);
+            setText("connectionLabel", label);
+            setText("streamState", connected ? "Live" : "Offline");
+        }
+
+        function updateSummary() {
+            const nodes = [...state.nodes.values()];
+            const activeNodes = nodes.filter(node => performance.now() - node.lastUpdate < 2200);
+            const avgLight = nodes.length
+                ? Math.round(nodes.reduce((sum, node) => sum + node.light, 0) / nodes.length)
+                : 0;
+
+            setText("activeCount", `${activeNodes.length} active`);
+            setText("avgLight", String(avgLight));
+            setText("latestEvent", state.latestEvent);
+        }
+
+        function stepNodeMotion(node) {
+            const moveStep = 22;
+            node.targetX = clamp(node.targetX + node.velocityX * moveStep, -FIELD_LIMIT, FIELD_LIMIT);
+            node.targetY = clamp(node.targetY + node.velocityY * moveStep, -FIELD_LIMIT, FIELD_LIMIT);
+            node.x += (node.targetX - node.x) * 0.14;
+            node.y += (node.targetY - node.y) * 0.14;
+        }
+
+        function launchProjectile(node) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 58 + Math.random() * 22;
+            state.projectiles.push({
+                id: `${node.id}-${performance.now()}-${Math.random()}`,
+                x: node.x,
+                y: node.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 10 + Math.random() * 6,
+                life: 14,
+                color: node.palette.stripe,
+                stroke: node.palette.stroke
+            });
+        }
+
+        function stepProjectiles() {
+            state.projectiles = state.projectiles
+                .map(projectile => ({
+                    ...projectile,
+                    x: projectile.x + projectile.vx,
+                    y: projectile.y + projectile.vy,
+                    vx: projectile.vx * 0.92,
+                    vy: projectile.vy * 0.92,
+                    life: projectile.life - 1,
+                    radius: projectile.radius * 0.96
+                }))
+                .filter(projectile =>
+                    projectile.life > 0 &&
+                    Math.abs(projectile.x) < FIELD_LIMIT * 1.2 &&
+                    Math.abs(projectile.y) < FIELD_LIMIT * 1.2
+                );
+        }
+
+        function applyNodeUpdate(id, patch) {
+            const node = ensureNode(id);
+            if (!node) return;
+
+            if (Number.isFinite(patch.ax)) node.ax = clamp(Math.round(patch.ax), -2048, 2048);
+            if (Number.isFinite(patch.ay)) node.ay = clamp(Math.round(patch.ay), -2048, 2048);
+            if (Number.isFinite(patch.light)) node.light = clamp(Math.round(patch.light), 0, 255);
+            if (Number.isFinite(patch.sound)) node.sound = clamp(Math.round(patch.sound), 0, 255);
+            if (Number.isFinite(patch.compass)) node.compass = clamp(Math.round(patch.compass), 0, 360);
+            if (typeof patch.btnA === "boolean") node.btnA = patch.btnA;
+            if (typeof patch.btnB === "boolean") node.btnB = patch.btnB;
+            if (typeof patch.touch === "boolean") node.touch = patch.touch;
+            if (typeof patch.logo === "boolean") node.logo = patch.logo;
+            if (typeof patch.gesture === "string" && patch.gesture) node.gesture = patch.gesture;
+            if (patch.move === "up") {
+                node.velocityX = 0;
+                node.velocityY = -1;
+            }
+            if (patch.move === "down") {
+                node.velocityX = 0;
+                node.velocityY = 1;
+            }
+            if (patch.move === "left") {
+                node.velocityX = -1;
+                node.velocityY = 0;
+            }
+            if (patch.move === "right") {
+                node.velocityX = 1;
+                node.velocityY = 0;
+            }
+            if (patch.stop) {
+                node.velocityX = 0;
+                node.velocityY = 0;
+            } else if (!patch.move) {
+                node.velocityX = deriveVelocityFromTilt(node.ax);
+                node.velocityY = deriveVelocityFromTilt(node.ay);
+            }
+            if (patch.shakeBurst || patch.gesture === "shake") {
+                node.shakeUntil = performance.now() + 700;
+            }
+            if (patch.shootBall) {
+                launchProjectile(node);
+            }
+
+            node.label = displayNameFor(id);
+            node.lastUpdate = performance.now();
+            node.pulse = Math.max(node.pulse, 0.8);
+
+            const eventParts = [
+                node.btnA ? "A" : "",
+                node.btnB ? "B" : "",
+                node.touch ? "touch" : "",
+                node.logo ? "logo" : "",
+                node.gesture && node.gesture !== "idle" ? node.gesture : ""
+            ].filter(Boolean);
+            state.latestEvent = eventParts.join(" / ") || "sensor update";
+            updateSummary();
+            renderChart();
+        }
+
+        function decodeStrictHubField(key, numericValue) {
+            if (!Number.isFinite(numericValue)) return null;
+            if (key === "x" && numericValue >= -4096 && numericValue <= 4096) return { ax: numericValue };
+            if (key === "y" && numericValue >= -4096 && numericValue <= 4096) return { ay: numericValue };
+            if (key === "l" && numericValue >= 0 && numericValue <= 255) return { light: numericValue };
+            if (key === "s" && numericValue >= 0 && numericValue <= 255) return { sound: numericValue };
+            if (key === "c" && numericValue >= 0 && numericValue <= 360) return { compass: numericValue };
+            if (key === "a") {
+                if (numericValue === 1) return { btnA: true, btnB: false, gesture: "button-a" };
+                if (numericValue === 2) return { btnA: false, btnB: true, gesture: "button-b" };
+                if (numericValue === 3) return { gesture: "shoot", shootBall: true };
+            }
+            if (key === "g") {
+                if (numericValue === 1) return { move: "down" };
+                if (numericValue === 2) return { move: "up" };
+                if (numericValue === 3) return { move: "left" };
+                if (numericValue === 4) return { move: "right" };
+                if (numericValue === 5) return { stop: true };
+                if (numericValue === 8) return { gesture: "shake", shakeBurst: true };
+            }
+            return null;
+        }
+
+        function parseHubLine(rawLine) {
+            const line = (rawLine || "").trim();
+            if (!line) return null;
+
+            try {
+                const parsed = JSON.parse(line);
+                if (parsed && parsed.id && isAllowedDeviceId(parsed.id)) {
+                    return {
+                        id: parsed.id,
+                        patch: {
+                            ax: "ax" in parsed ? Number(parsed.ax) : undefined,
+                            ay: "ay" in parsed ? Number(parsed.ay) : undefined,
+                            light: "light" in parsed ? Number(parsed.light) : undefined,
+                            sound: "sound" in parsed ? Number(parsed.sound) : undefined,
+                            compass: "compass" in parsed ? Number(parsed.compass) : undefined,
+                            btnA: "btnA" in parsed ? normalizeBoolean(parsed.btnA) : undefined,
+                            btnB: "btnB" in parsed ? normalizeBoolean(parsed.btnB) : undefined,
+                            touch: "touch" in parsed ? normalizeBoolean(parsed.touch) : undefined,
+                            logo: "logo" in parsed ? normalizeBoolean(parsed.logo) : undefined,
+                            gesture: parsed.gesture || undefined
+                        }
+                    };
+                }
+            } catch (error) {
+                // Fall back to strict pipe format.
+            }
+
+            const match = /^([A-Za-z0-9-]+)\|([a-z])=(-?\d+)$/.exec(line);
+            if (!match) return null;
+
+            const id = match[1];
+            const key = match[2];
+            const numericValue = Number(match[3]);
+
+            if (!isValidMicrobitSerial(id) || !isAllowedDeviceId(id)) return null;
+
+            const patch = decodeStrictHubField(key, numericValue);
+            if (!patch) return null;
+
+            return { id, patch };
+        }
+
+        function handleHubLine(rawLine) {
+            setText("lastPacket", rawLine.trim() || "No packets yet.");
+            const message = parseHubLine(rawLine);
+            if (!message) {
+                state.latestEvent = "bad packet";
+                updateSummary();
+                return;
+            }
+            applyNodeUpdate(message.id, message.patch);
+        }
+
+        class LineBreakTransformer {
+            constructor() {
+                this.buffer = "";
+            }
+            transform(chunk, controller) {
+                this.buffer += chunk;
+                const lines = this.buffer.split(/\r?\n/);
+                this.buffer = lines.pop();
+                lines.forEach(line => controller.enqueue(line));
+            }
+            flush(controller) {
+                if (this.buffer) controller.enqueue(this.buffer);
+            }
+        }
+
+        async function readHubLoop() {
+            try {
+                while (state.serial.keepReading && state.serial.reader) {
+                    const { value, done } = await state.serial.reader.read();
+                    if (done) break;
+                    if (typeof value === "string") handleHubLine(value);
+                }
+            } catch (error) {
+                await disconnectHub();
+            } finally {
+                if (state.serial.keepReading) await disconnectHub();
+            }
+        }
+
+        async function connectHub() {
+            if (!("serial" in navigator)) {
+                setConnectionState(false, "Web Serial unsupported");
+                return;
+            }
+
+            try {
+                const availablePorts = await navigator.serial.getPorts();
+                const knownMicrobitPort = availablePorts.find(port => {
+                    const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+                    return info && info.usbVendorId === 0x0D28;
+                });
+
+                state.serial.port = knownMicrobitPort || await navigator.serial.requestPort({ filters: MICROBIT_USB_FILTERS });
+                await state.serial.port.open({ baudRate: 115200 });
+                const decoder = new TextDecoderStream();
+                state.serial.inputDone = state.serial.port.readable.pipeTo(decoder.writable);
+                state.serial.reader = decoder.readable
+                    .pipeThrough(new TransformStream(new LineBreakTransformer()))
+                    .getReader();
+                state.serial.keepReading = true;
+                setConnectionState(true, "Hub connected");
+                setText("connectBtn", "Disconnect Hub");
+                readHubLoop();
+            } catch (error) {
+                await disconnectHub();
+            }
+        }
+
+        async function disconnectHub() {
+            state.serial.keepReading = false;
+
+            if (state.serial.reader) {
+                try { await state.serial.reader.cancel(); } catch (error) {}
+                try { state.serial.reader.releaseLock(); } catch (error) {}
+                state.serial.reader = null;
+            }
+
+            if (state.serial.inputDone) {
+                try { await state.serial.inputDone; } catch (error) {}
+                state.serial.inputDone = null;
+            }
+
+            if (state.serial.port) {
+                try { await state.serial.port.close(); } catch (error) {}
+                state.serial.port = null;
+            }
+
+            setText("connectBtn", "Connect Hub");
+            setConnectionState(state.simulationRunning, state.simulationRunning ? "Simulation streaming" : "Hub offline");
+        }
+
+        function createDemoPacket(id) {
+            const gesturePool = ["idle", "shake", "tilt-left", "tilt-right", "freefall"];
+            return JSON.stringify({
+                id,
+                light: Math.round(Math.random() * 255),
+                sound: Math.round(Math.random() * 255),
+                ax: Math.round(mapRange(Math.random(), 0, 1, -950, 950)),
+                ay: Math.round(mapRange(Math.random(), 0, 1, -950, 950)),
+                compass: Math.round(mapRange(Math.random(), 0, 1, 0, 360)),
+                btnA: Math.random() > 0.86,
+                btnB: Math.random() > 0.89,
+                touch: Math.random() > 0.94,
+                logo: Math.random() > 0.96,
+                gesture: Math.random() > 0.82
+                    ? gesturePool[Math.floor(Math.random() * gesturePool.length)]
+                    : "idle"
+            });
+        }
+
+        function toggleSimulation() {
+            if (state.simulationRunning) {
+                clearInterval(state.simulationTimer);
+                state.simulationTimer = null;
+                state.simulationRunning = false;
+                setText("simulateBtn", "Start Demo");
+                setConnectionState(!!state.serial.port, state.serial.port ? "Hub connected" : "Hub offline");
+                renderChart();
+                return;
+            }
+
+            for (const id of DEMO_IDS) {
+                if (!state.registry[id]) state.registry[id] = id;
+                ensureNode(id);
+            }
+            saveRegistry();
+            renderRegistryList();
+            updateSummary();
+            renderChart();
+
+            state.simulationRunning = true;
+            setText("simulateBtn", "Stop Demo");
+            setConnectionState(true, "Simulation streaming");
+            state.simulationTimer = setInterval(() => {
+                for (const id of DEMO_IDS) {
+                    handleHubLine(createDemoPacket(id));
+                }
+            }, 260);
+        }
+
+        function buildSeriesData() {
+            const now = performance.now();
+            const nodes = [...state.nodes.values()];
+            return nodes.map((node, index) => {
+                stepNodeMotion(node);
+                const age = now - node.lastUpdate;
+                const awake = age < 2200;
+                const blinkWindow = ((Math.floor(now / 240) + node.blinkOffset + state.blinkSeed) % 19) === 0;
+                const halo = mapRange(node.light, 0, 255, 18, 52);
+                const bodyW = mapRange(node.light, 0, 255, 44, 66) + node.bodyWidthBias;
+                const bodyH = mapRange(node.sound, 0, 255, 48, 72) + node.bodyHeightBias;
+                const bob = Math.sin(now / 520 + index) * 12;
+                const shakePower = node.shakeUntil > now ? (node.shakeUntil - now) / 700 : 0;
+                const shakeX = shakePower ? Math.sin(now / 28 + index * 3) * 18 * shakePower : 0;
+                const shakeY = shakePower ? Math.cos(now / 31 + index * 5) * 10 * shakePower : 0;
+
+                node.pulse *= 0.92;
+
+                return {
+                    id: node.id,
+                    name: node.label,
+                    value: [node.x, -node.y, halo, bodyW, bodyH, blinkWindow ? 1 : 0, awake ? 1 : 0, bob, node.pulse, shakeX, shakeY],
+                    meta: {
+                        label: node.label,
+                        gesture: node.gesture,
+                        light: node.light,
+                        sound: node.sound,
+                        compass: node.compass,
+                        btnA: node.btnA,
+                        btnB: node.btnB,
+                        touch: node.touch,
+                        logo: node.logo,
+                        awake,
+                        palette: node.palette,
+                        cornerRadius: node.cornerRadius,
+                        eyeType: node.eyeType,
+                        stripeHeight: node.stripeHeight,
+                        legSpread: node.legSpread,
+                        antenna: node.antenna
+                    }
+                };
+            });
+        }
+
+        function buildProjectileSeriesData() {
+            stepProjectiles();
+            return state.projectiles.map(projectile => ({
+                value: [projectile.x, -projectile.y, projectile.radius, projectile.life],
+                meta: projectile
+            }));
+        }
+
+        function createOption() {
+            const seriesData = buildSeriesData();
+            const projectileData = buildProjectileSeriesData();
+
+            return {
+                animationDurationUpdate: 260,
+                animationEasingUpdate: "cubicOut",
+                grid: {
+                    left: 64,
+                    right: 64,
+                    top: 48,
+                    bottom: 56
+                },
+                tooltip: {
+                    trigger: "item",
+                    backgroundColor: "rgba(49, 32, 32, 0.92)",
+                    borderWidth: 0,
+                    textStyle: {
+                        color: "#fff7f2",
+                        fontFamily: "IBM Plex Sans, sans-serif"
+                    },
+                    formatter(params) {
+                        const meta = params.data.meta;
+                        const badges = [
+                            meta.btnA ? "A" : "",
+                            meta.btnB ? "B" : "",
+                            meta.touch ? "touch" : "",
+                            meta.logo ? "logo" : ""
+                        ].filter(Boolean).join(", ") || "none";
+                        return `
+                            <strong>${escapeHtml(meta.label)}</strong><br/>
+                            Light: ${meta.light}<br/>
+                            Sound: ${meta.sound}<br/>
+                            Compass: ${meta.compass}<br/>
+                            Gesture: ${escapeHtml(meta.gesture)}<br/>
+                            Inputs: ${escapeHtml(badges)}
+                        `;
+                    }
+                },
+                xAxis: {
+                    min: -1100,
+                    max: 1100,
+                    name: "west/east tilt",
+                    nameLocation: "middle",
+                    nameGap: 34,
+                    splitNumber: 5,
+                    axisLine: { lineStyle: { color: "rgba(101, 84, 84, 0.45)" } },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: "#705b5b",
+                        fontFamily: "IBM Plex Mono, monospace"
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: "rgba(153, 0, 0, 0.07)",
+                            type: "dashed"
+                        }
+                    }
+                },
+                yAxis: {
+                    min: -1100,
+                    max: 1100,
+                    name: "forward/back tilt",
+                    nameLocation: "middle",
+                    nameGap: 46,
+                    splitNumber: 5,
+                    axisLine: { lineStyle: { color: "rgba(101, 84, 84, 0.45)" } },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        color: "#705b5b",
+                        fontFamily: "IBM Plex Mono, monospace"
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            color: "rgba(153, 0, 0, 0.07)",
+                            type: "dashed"
+                        }
+                    }
+                },
+                graphic: [
+                    {
+                        type: "text",
+                        left: 76,
+                        top: 28,
+                        style: {
+                            text: "LUDDY CHARACTER FIELD",
+                            font: "700 12px IBM Plex Sans",
+                            fill: "#990000",
+                            letterSpacing: 4
+                        }
+                    },
+                    {
+                        type: "text",
+                        right: 78,
+                        bottom: 24,
+                        style: {
+                            text: "IU crimson + warm sandstone palette",
+                            font: "500 12px IBM Plex Sans",
+                            fill: "#705b5b"
+                        }
+                    }
+                ],
+                series: [
+                    {
+                        type: "custom",
+                        coordinateSystem: "cartesian2d",
+                        encode: {
+                            x: 0,
+                            y: 1,
+                            tooltip: [0, 1, 2, 3, 4]
+                        },
+                        renderItem(params, api) {
+                            const meta = seriesData[params.dataIndex].meta;
+                            const point = api.coord([api.value(0), api.value(1)]);
+                            const halo = api.value(2);
+                            const bodyW = api.value(3);
+                            const bodyH = api.value(4);
+                            const blink = api.value(5) === 1;
+                            const awake = api.value(6) === 1;
+                            const bob = api.value(7);
+                            const pulse = api.value(8);
+                            const shakeX = api.value(9);
+                            const shakeY = api.value(10);
+                            const x = point[0] + shakeX;
+                            const y = point[1] + bob + shakeY;
+                            const shadowY = bodyH * 0.58;
+                            const glowColor = awake ? meta.palette.glow : "rgba(189, 171, 160, 0.24)";
+                            const strokeColor = awake ? meta.palette.stroke : "#9d8c84";
+                            const labelColor = awake ? meta.palette.stroke : "#776565";
+                            const eyeColor = awake ? "#351919" : "#857474";
+                            const pinColor = awake ? "#8f7b71" : "#b8aba6";
+                            const badgeBg = awake ? meta.palette.badge : "#8d7f7a";
+                            const gestureText = meta.gesture && meta.gesture !== "idle" ? meta.gesture.toUpperCase() : "";
+
+                            return {
+                                type: "group",
+                                position: [x, y],
+                                children: [
+                                    {
+                                        type: "circle",
+                                        shape: { cx: 0, cy: 0, r: halo + pulse * 16 },
+                                        style: { fill: glowColor }
+                                    },
+                                    {
+                                        type: "circle",
+                                        shape: { cx: 0, cy: shadowY, r: Math.max(bodyW * 0.28, 14) + pulse * 2 },
+                                        style: { fill: "rgba(70, 44, 44, 0.10)" }
+                                    },
+                                    {
+                                        type: "rect",
+                                        shape: { x: -bodyW / 2, y: -bodyH / 2, width: bodyW, height: bodyH, r: meta.cornerRadius },
+                                        style: {
+                                            fill: meta.palette.shell,
+                                            stroke: strokeColor,
+                                            lineWidth: awake ? 2.5 : 1.5,
+                                            shadowBlur: 18,
+                                            shadowColor: "rgba(111, 0, 0, 0.10)"
+                                        }
+                                    },
+                                    {
+                                        type: "rect",
+                                        shape: { x: -bodyW / 2 + 7, y: -bodyH / 2 + 9, width: bodyW - 14, height: meta.stripeHeight, r: meta.stripeHeight / 2 },
+                                        style: { fill: meta.palette.stripe }
+                                    },
+                                    meta.antenna ? {
+                                        type: "group",
+                                        children: [
+                                            {
+                                                type: "line",
+                                                shape: { x1: 0, y1: -bodyH / 2, x2: 0, y2: -bodyH / 2 - 14 },
+                                                style: { stroke: strokeColor, lineWidth: 2, lineCap: "round" }
+                                            },
+                                            {
+                                                type: "circle",
+                                                shape: { cx: 0, cy: -bodyH / 2 - 16, r: 4 },
+                                                style: { fill: meta.palette.badge }
+                                            }
+                                        ]
+                                    } : {
+                                        type: "group",
+                                        children: []
+                                    },
+                                    blink ? {
+                                        type: "group",
+                                        children: [
+                                            {
+                                                type: "line",
+                                                shape: { x1: -11, y1: -6, x2: -3, y2: -6 },
+                                                style: { stroke: eyeColor, lineWidth: 2, lineCap: "round" }
+                                            },
+                                            {
+                                                type: "line",
+                                                shape: { x1: 3, y1: -6, x2: 11, y2: -6 },
+                                                style: { stroke: eyeColor, lineWidth: 2, lineCap: "round" }
+                                            }
+                                        ]
+                                    } : {
+                                        type: "group",
+                                        children: meta.eyeType === "square" ? [
+                                            {
+                                                type: "rect",
+                                                shape: { x: -10, y: -10, width: 6, height: 6, r: 1.2 },
+                                                style: { fill: eyeColor }
+                                            },
+                                            {
+                                                type: "rect",
+                                                shape: { x: 4, y: -10, width: 6, height: 6, r: 1.2 },
+                                                style: { fill: eyeColor }
+                                            }
+                                        ] : meta.eyeType === "line" ? [
+                                            {
+                                                type: "line",
+                                                shape: { x1: -10, y1: -7, x2: -4, y2: -7 },
+                                                style: { stroke: eyeColor, lineWidth: 2.6, lineCap: "round" }
+                                            },
+                                            {
+                                                type: "line",
+                                                shape: { x1: 4, y1: -7, x2: 10, y2: -7 },
+                                                style: { stroke: eyeColor, lineWidth: 2.6, lineCap: "round" }
+                                            }
+                                        ] : [
+                                            {
+                                                type: "circle",
+                                                shape: { cx: -7, cy: -7, r: 3.2 },
+                                                style: { fill: eyeColor }
+                                            },
+                                            {
+                                                type: "circle",
+                                                shape: { cx: 7, cy: -7, r: 3.2 },
+                                                style: { fill: eyeColor }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        type: "line",
+                                        shape: { x1: -8, y1: 7, x2: 8, y2: 7 },
+                                        style: { stroke: eyeColor, lineWidth: 1.8, lineCap: "round" }
+                                    },
+                                    {
+                                        type: "group",
+                                        children: [-1, 0, 1].map(index => ({
+                                            type: "rect",
+                                            shape: { x: index * meta.legSpread - 3, y: bodyH / 2 - 1, width: 6, height: 10, r: 2 },
+                                            style: { fill: pinColor }
+                                        }))
+                                    },
+                                    {
+                                        type: "text",
+                                        style: {
+                                            x: 0,
+                                            y: -bodyH / 2 - 18,
+                                            text: meta.label,
+                                            textAlign: "center",
+                                            textVerticalAlign: "middle",
+                                            font: "700 13px IBM Plex Sans",
+                                            fill: labelColor
+                                        }
+                                    },
+                                    gestureText ? {
+                                        type: "text",
+                                        style: {
+                                            x: 0,
+                                            y: bodyH / 2 + 20,
+                                            text: gestureText,
+                                            textAlign: "center",
+                                            textVerticalAlign: "middle",
+                                            font: "700 10px IBM Plex Sans",
+                                            fill: "#990000"
+                                        }
+                                    } : {
+                                        type: "group",
+                                        children: []
+                                    },
+                                    meta.btnA ? {
+                                        type: "group",
+                                        children: [
+                                            {
+                                                type: "rect",
+                                                shape: { x: -bodyW / 2 - 18, y: -14, width: 24, height: 16, r: 8 },
+                                                style: { fill: badgeBg }
+                                            },
+                                            {
+                                                type: "text",
+                                                style: {
+                                                    x: -bodyW / 2 - 6,
+                                                    y: -6,
+                                                    text: "A",
+                                                    textAlign: "center",
+                                                    textVerticalAlign: "middle",
+                                                    font: "700 10px IBM Plex Sans",
+                                                    fill: "#fff4ef"
+                                                }
+                                            }
+                                        ]
+                                    } : { type: "group", children: [] },
+                                    meta.btnB ? {
+                                        type: "group",
+                                        children: [
+                                            {
+                                                type: "rect",
+                                                shape: { x: bodyW / 2 - 6, y: -14, width: 24, height: 16, r: 8 },
+                                                style: { fill: badgeBg }
+                                            },
+                                            {
+                                                type: "text",
+                                                style: {
+                                                    x: bodyW / 2 + 6,
+                                                    y: -6,
+                                                    text: "B",
+                                                    textAlign: "center",
+                                                    textVerticalAlign: "middle",
+                                                    font: "700 10px IBM Plex Sans",
+                                                    fill: "#fff4ef"
+                                                }
+                                            }
+                                        ]
+                                    } : { type: "group", children: [] }
+                                ]
+                            };
+                        },
+                        data: seriesData
+                    },
+                    {
+                        type: "custom",
+                        coordinateSystem: "cartesian2d",
+                        silent: true,
+                        z: 2,
+                        encode: {
+                            x: 0,
+                            y: 1
+                        },
+                        renderItem(params, api) {
+                            const point = api.coord([api.value(0), api.value(1)]);
+                            const radius = api.value(2);
+                            const life = api.value(3);
+                            const meta = projectileData[params.dataIndex].meta;
+                            return {
+                                type: "group",
+                                children: [
+                                    {
+                                        type: "circle",
+                                        shape: { cx: point[0], cy: point[1], r: radius + 4 },
+                                        style: { fill: "rgba(255, 255, 255, 0.18)" }
+                                    },
+                                    {
+                                        type: "circle",
+                                        shape: { cx: point[0], cy: point[1], r: radius },
+                                        style: {
+                                            fill: meta.color,
+                                            stroke: meta.stroke,
+                                            lineWidth: Math.max(1.5, life * 0.12)
+                                        }
+                                    }
+                                ]
+                            };
+                        },
+                        data: projectileData
+                    }
+                ]
+            };
+        }
+
+        function renderChart() {
+            if (!state.chart) return;
+            state.chart.setOption(createOption(), true);
+        }
+
+        function startRenderLoop() {
+            if (state.renderTimer) clearInterval(state.renderTimer);
+            state.renderTimer = setInterval(() => {
+                state.blinkSeed = (state.blinkSeed + 1) % 1000;
+                renderChart();
+            }, 140);
+        }
+
+        function initializeChart() {
+            const vizElement = getElement("viz");
+            if (!vizElement) return;
+            state.chart = echarts.init(vizElement, null, { renderer: "svg" });
+            renderChart();
+            window.addEventListener("resize", () => state.chart && state.chart.resize());
+            startRenderLoop();
+        }
+
+        function resetView() {
+            state.nodes.clear();
+            state.projectiles = [];
+            pruneNodes();
+            state.latestEvent = "Waiting";
+            setText("lastPacket", "No packets yet.");
+            updateSummary();
+            renderRegistryList();
+            renderChart();
+        }
+
+        const connectBtn = getElement("connectBtn");
+        if (connectBtn) {
+            connectBtn.addEventListener("click", async () => {
+                if (state.serial.port) {
+                    await disconnectHub();
+                } else {
+                    await connectHub();
+                }
+            });
+        }
+
+        const simulateBtn = getElement("simulateBtn");
+        if (simulateBtn) simulateBtn.addEventListener("click", toggleSimulation);
+
+        const resetBtn = getElement("resetBtn");
+        if (resetBtn) resetBtn.addEventListener("click", resetView);
+
+        if ("serial" in navigator) {
+            navigator.serial.addEventListener("disconnect", async event => {
+                if (state.serial.port && event.target === state.serial.port) {
+                    await disconnectHub();
+                }
+            });
+        }
+
+        async function initializeRegistry() {
+            const fileRegistry = await loadRegistryFromFile();
+            state.registry = { ...fileRegistry, ...state.registry };
+            saveRegistry();
+            pruneNodes();
+            renderRegistryList();
+            updateSummary();
+            renderChart();
+        }
+
+        state.registry = loadRegistry();
+        renderRegistryList();
+        updateSummary();
+        initializeChart();
+        initializeRegistry();
+    </script>
+</body>
+</html>

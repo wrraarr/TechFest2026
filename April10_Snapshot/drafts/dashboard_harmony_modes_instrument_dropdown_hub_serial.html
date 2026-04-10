@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luddy Orchestra: Master Score</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="sample_maps.js"></script>
+    <script src="orchestra_dash.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background-color: #fafafa;
+            color: #1a1a1a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- Overlay / Start Screen --- */
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(250, 250, 250, 0.97);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 12px;
+        }
+        #overlay h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            letter-spacing: -0.02em;
+            text-transform: none;
+        }
+        #overlay p {
+            font-size: 0.9rem;
+            color: #888;
+            margin: 0 0 16px 0;
+            font-weight: 400;
+        }
+        #startBtn {
+            padding: 14px 36px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.02em;
+        }
+        #startBtn:hover { background: #333; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        #startBtn:active { transform: scale(0.97) translateY(0); }
+
+        .button-row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+        .control-btn {
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        }
+        .control-btn:hover {
+            background: #333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+        }
+        .control-btn:active { transform: scale(0.98); }
+        .control-btn.secondary {
+            background: #fff;
+            color: #1a1a1a;
+        }
+        .control-btn.secondary:hover { background: #f2f2f2; }
+        .panel-note {
+            margin-top: 2px;
+            font-size: 0.72rem;
+            line-height: 1.35;
+            color: #666;
+            max-width: 260px;
+            text-align: right;
+        }
+
+        /* --- HUD --- */
+        #ui {
+            position: absolute; bottom: 24px; right: 24px;
+            pointer-events: none; z-index: 10;
+        }
+        #ui h1 {
+            margin: 0;
+            color: #1a1a1a;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: -0.01em;
+        }
+        .hud {
+            margin-top: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #555;
+            background: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+            display: inline-block;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+
+        #instrumentPanel {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            z-index: 20;
+            margin-top: 10px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+        #instrumentPanel label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #666;
+        }
+        #instrumentPanel select {
+            min-width: 170px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e5e5e5;
+            background: #fff;
+            color: #1a1a1a;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            outline: none;
+        }
+        #instrumentPanel select:focus {
+            border-color: #bbb;
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.05);
+        }
+        #instrumentPanel .hud {
+            margin-top: 0;
+            width: 100%;
+            text-align: right;
+        }
+
+        /* --- D3 Score --- */
+        svg { width: 100vw; height: 100vh; display: block; }
+
+        .staff-line { stroke: #ddd; stroke-width: 1px; }
+        .staff-line.middle-c { stroke: #bbb; stroke-dasharray: 5 4; stroke-width: 1px; }
+        @font-face {
+            font-family: 'Bravura';
+            src: url('https://cdn.jsdelivr.net/gh/steinbergmedia/bravura/redist/woff/Bravura.woff') format('woff');
+            font-display: swap;
+        }
+        .clef-symbol {
+            font-family: 'Bravura', serif;
+            fill: #ccc;
+        }
+        .clef-label {
+            fill: #aaa;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            font-style: normal;
+            opacity: 0.8;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .chord-watermark {
+            fill: #ccc;
+            opacity: 0.52;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            letter-spacing: -0.04em;
+        }
+
+        /* --- Nodes --- */
+        .node { cursor: pointer; }
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2.5px;
+            transition: filter 0.15s ease, box-shadow 0.15s ease;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.08));
+        }
+        .node:hover circle {
+            filter: brightness(1.08) drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+        }
+        .node.dragging circle {
+            filter: brightness(1.15) drop-shadow(0 4px 12px rgba(0,0,0,0.18));
+            stroke: #1a1a1a;
+            stroke-width: 2px;
+        }
+        .node text.label {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            fill: #fff;
+            pointer-events: none;
+            text-anchor: middle;
+            transform: translateY(-4px);
+            font-size: 12px;
+            letter-spacing: 0.02em;
+        }
+        .node text.note {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            fill: #000;
+            pointer-events: none;
+            text-anchor: middle;
+            transform: translateY(14px);
+            font-size: 10px;
+        }
+
+        /* Instrument Colors — muted, sophisticated palette */
+        .baton      { fill: #1a1a1a; }
+        .state-ctrl { fill: #888; }
+        .violin     { fill: #5b8def; }
+        .viola      { fill: #a07cd6; }
+        .cello      { fill: #4dab8c; }
+        .bass       { fill: #d4845a; }
+
+        /* Range guides */
+        .range-line {
+            stroke: rgba(0, 0, 0, 0.03);
+            stroke-width: 36px;
+            stroke-linecap: round;
+        }
+    </style>
+</head>
+<body>
+
+<div id="overlay">
+    <h1>Luddy Digital Score</h1>
+    <p>Interactive orchestra visualization</p>
+    <button id="startBtn">Initialize Orchestra</button>
+</div>
+
+<div id="ui">
+    <h1>Master Score</h1>
+    <div class="hud" id="hud-state">KEY: C Major | LEVEL: Simple | CHORD: I</div>
+</div>
+
+
+<div id="instrumentPanel">
+    <label for="instrumentSet">Instrument set</label>
+    <select id="instrumentSet" aria-label="Choose instrument set">
+        <option value="Full Strings" selected>Full Strings</option>
+        <option value="Low Strings">Low Strings</option>
+        <option value="Bright Strings">Bright Strings</option>
+    </select>
+    <div class="button-row">
+        <button class="control-btn" id="connectHubBtn" type="button">Connect Hub</button>
+        <button class="control-btn secondary" id="demoBtn" type="button">Demo Trigger</button>
+    </div>
+    <div class="hud" id="hub-status">SERIAL: DISCONNECTED</div>
+    <div class="hud" id="hub-last">LAST: —</div>
+    <div class="panel-note">Live hub expects <code>ID:VALUE</code> lines such as <code>V1:1</code>, <code>K:2</code>, or <code>D:4</code>.</div>
+</div>
+
+<svg id="viz"></svg>
+
+<script>
+ 
+
+    // --- 1. MUSICAL MATH & LOGIC ---
+    let currentKey = 'C';
+    let currentMode = 'Major';
+    let currentChord = 'I';
+    let currentHarmonyLevel = 'Simple';
+    let currentDissonance = 0;
+    let currentBpm = 96;
+
+    const ORCHESTRA_KEY_ORDER = ['C', 'G', 'D', 'A'];
+    const DISSONANCE_TO_CHORD = ['I', 'I', 'IV', 'V', 'V7', 'VII'];
+    const PLAYER_IDS = new Set(['B1', 'C1', 'C2', 'VA1', 'VA2', 'V1', 'V2', 'V3', 'V4']);
+    const HUB_IDS = new Set(['T', 'K', 'D', ...PLAYER_IDS]);
+
+    const serialState = {
+        port: null,
+        reader: null,
+        inputDone: null,
+        keepReading: false,
+        malformedCount: 0,
+        lastRawLine: '—',
+        tapTimes: []
+    };
+
+    const NOTE_DURATIONS = {
+        bass: '2n',
+        cello: '4n',
+        viola: '8n',
+        violin: '8n'
+    };
+
+    const keyRoots = { 
+        'C': 0, 'G': 7, 'D': 2, 'A': 9, 'E': 4, 'B': 11, 
+        'F#': 6, 'Db': 1, 'Ab': 8, 'Eb': 3, 'Bb': 10, 'F': 5 
+    };
+
+    const HARMONY_LEVELS = {
+        'Simple': {
+            keys: ['C', 'G', 'D', 'A', 'F', 'Bb'],
+            chords: ['I', 'IV', 'V', 'V7']
+        },
+        'Advanced': {
+            keys: ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'],
+            chords: ['I', 'II', 'III', 'IV', 'V', 'V7', 'VI', 'VII']
+        }
+    };
+
+    const chordIntervals = {
+        'Major': {
+            'I': [0, 4, 7],
+            'II': [2, 5, 9],
+            'III': [4, 7, 11],
+            'IV': [5, 9, 12],
+            'V': [7, 11, 14],
+            'V7': [7, 11, 14, 17],
+            'VI': [9, 12, 16],
+            'VII': [11, 14, 17]
+        },
+        'Minor': {
+            'I': [0, 3, 7],
+            'II': [2, 5, 8],
+            'III': [3, 7, 10],
+            'IV': [5, 8, 12],
+            'V': [7, 11, 14],
+            'V7': [7, 11, 14, 17],
+            'VI': [8, 12, 15],
+            'VII': [10, 14, 17]
+        }
+    };
+
+
+    const INSTRUMENT_PRESETS = {
+        "Full Strings": [
+            { type: "bass",   label: "B1",  startMidi: 36, minMidi: 24, maxMidi: 72,  r: 35 },
+            { type: "cello",  label: "C2",  startMidi: 43, minMidi: 36, maxMidi: 84,  r: 30 },
+            { type: "cello",  label: "C1",  startMidi: 48, minMidi: 36, maxMidi: 84,  r: 30 },
+            { type: "viola",  label: "VA2", startMidi: 55, minMidi: 48, maxMidi: 96,  r: 28 },
+            { type: "viola",  label: "VA1", startMidi: 60, minMidi: 48, maxMidi: 96,  r: 28 },
+            { type: "violin", label: "V4",  startMidi: 67, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "violin", label: "V3",  startMidi: 72, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "violin", label: "V2",  startMidi: 76, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "violin", label: "V1",  startMidi: 79, minMidi: 55, maxMidi: 103, r: 25 }
+        ],
+        "Low Strings": [
+            { type: "bass",   label: "B1",  startMidi: 34, minMidi: 24, maxMidi: 72,  r: 35 },
+            { type: "bass",   label: "B2",  startMidi: 38, minMidi: 24, maxMidi: 72,  r: 35 },
+            { type: "cello",  label: "C1",  startMidi: 43, minMidi: 36, maxMidi: 84,  r: 30 },
+            { type: "cello",  label: "C2",  startMidi: 48, minMidi: 36, maxMidi: 84,  r: 30 },
+            { type: "cello",  label: "C3",  startMidi: 52, minMidi: 36, maxMidi: 84,  r: 30 },
+            { type: "viola",  label: "VA1", startMidi: 55, minMidi: 48, maxMidi: 96,  r: 28 },
+            { type: "viola",  label: "VA2", startMidi: 59, minMidi: 48, maxMidi: 96,  r: 28 },
+            { type: "viola",  label: "VA3", startMidi: 63, minMidi: 48, maxMidi: 96,  r: 28 },
+            { type: "violin", label: "V1",  startMidi: 67, minMidi: 55, maxMidi: 103, r: 25 }
+        ],
+        "Bright Strings": [
+            { type: "cello",  label: "C1",  startMidi: 45, minMidi: 36, maxMidi: 84,  r: 30 },
+            { type: "viola",  label: "VA1", startMidi: 50, minMidi: 48, maxMidi: 96,  r: 28 },
+            { type: "viola",  label: "VA2", startMidi: 55, minMidi: 48, maxMidi: 96,  r: 28 },
+            { type: "violin", label: "V1",  startMidi: 60, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "violin", label: "V2",  startMidi: 64, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "violin", label: "V3",  startMidi: 67, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "violin", label: "V4",  startMidi: 71, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "violin", label: "V5",  startMidi: 74, minMidi: 55, maxMidi: 103, r: 25 },
+            { type: "bass",   label: "B1",  startMidi: 36, minMidi: 24, maxMidi: 72,  r: 35 }
+        ]
+    };
+
+
+    function getCurrentKeyPalette() {
+        return HARMONY_LEVELS[currentHarmonyLevel].keys;
+    }
+
+    function getCurrentChordPalette() {
+        return HARMONY_LEVELS[currentHarmonyLevel].chords;
+    }
+
+    function normalizeHarmonySelection() {
+        const validKeys = getCurrentKeyPalette();
+        const validChords = getCurrentChordPalette();
+
+        if (!validKeys.includes(currentKey)) currentKey = validKeys[0];
+        if (!validChords.includes(currentChord)) currentChord = validChords[0];
+    }
+
+// Snaps a raw MIDI value to the closest valid chord note based on role and direction
+    function getClosestChordNote(rawMidi, minMidi, maxMidi, direction = 'closest', instrumentType = 'none') {
+        let validNotes = [];
+        let rootNotes = []; // Keep track of the root notes specifically
+        let rootOffset = keyRoots[currentKey];
+        let intervals = chordIntervals[currentMode][currentChord];
+        
+        for (let oct = 0; oct <= 8; oct++) {
+            let baseMidi = (oct + 1) * 12 + rootOffset;
+            intervals.forEach(interval => {
+                let note = baseMidi + interval;
+                if (note >= minMidi && note <= maxMidi) {
+                    validNotes.push(note);
+                    // Interval 0 is always the Root of the chord
+                    if (interval === 0) rootNotes.push(note);
+                }
+            });
+        }
+        
+        if(validNotes.length === 0) return minMidi; 
+
+        // --- 1. BASS ROOT BIAS ---
+        // 75% chance the Bass ignores smooth voice-leading and anchors to a Root note
+        if (instrumentType === 'bass' && Math.random() < 0.75) {
+            if (rootNotes.length > 0) {
+                // Find the closest ROOT note, not just the closest chord note
+                return rootNotes.reduce((prev, curr) => 
+                    Math.abs(curr - rawMidi) < Math.abs(prev - rawMidi) ? curr : prev
+                );
+            }
+        }
+
+        // --- 2. RANDOM VOICE LEADING & LEAPS ---
+        if (direction === 'random') {
+            // 50/50 chance to step up or down
+            let moveUp = Math.random() > 0.5;
+            
+            // 25% chance to make a "larger move" (skip the nearest chord tone)
+            let isLeap = Math.random() < 0.25;
+
+            if (moveUp) {
+                // Filter notes higher than current pitch, sorted lowest to highest
+                let higherNotes = validNotes.filter(n => n >= rawMidi);
+                if (higherNotes.length > 0) {
+                    // If leap, grab the 2nd note in the array (skipping the nearest one)
+                    if (isLeap && higherNotes.length > 1) return higherNotes[1];
+                    return higherNotes[0];
+                }
+            } 
+            else {
+                // Filter notes lower than current pitch, sorted lowest to highest
+                let lowerNotes = validNotes.filter(n => n <= rawMidi);
+                if (lowerNotes.length > 0) {
+                    // To move down to the nearest note, we take the LAST element in the array.
+                    // To leap down, we take the second-to-last element.
+                    if (isLeap && lowerNotes.length > 1) return lowerNotes[lowerNotes.length - 2];
+                    return lowerNotes[lowerNotes.length - 1];
+                }
+            }
+        }
+
+        // --- 3. DEFAULT (MANUAL DRAG) LOGIC ---
+        return validNotes.reduce((prev, curr) => 
+            Math.abs(curr - rawMidi) < Math.abs(prev - rawMidi) ? curr : prev
+        );
+    }
+   
+    
+    // --- 2. AUDIO ENGINE ---
+    let currentInstrumentSet = "Full Strings";
+    let orchestra = new Orchestra("Strings");
+
+    // --- 3. D3 LAYOUT SCALES ---
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // MIDI Range: C1 (24) to C8 (108)
+    const SCORE_TOP = 80;
+    const SCORE_BOTTOM = height - 80;
+    
+    const yScale = d3.scaleLinear().domain([20, 108]).range([SCORE_BOTTOM, SCORE_TOP]);
+    const yToMidi = d3.scaleLinear().domain([SCORE_BOTTOM, SCORE_TOP]).range([20, 108]);
+
+    // Setup X Columns
+    const xControls = 80;
+    const xScoreStart = 250;
+    const colSpacing = (width - xScoreStart - 50) / 10; // 9 instruments = 8 gaps
+
+    const nodesData = [
+        // // Controls (Fixed on the left)
+        // { id: "BATON", type: "baton", label: "BATON", r: 35, isPlayer: false, x: xControls, y: SCORE_TOP + 50 },
+        // { id: "KEY", type: "state-ctrl", label: "KEY", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 150 },
+        // { id: "CHORD", type: "state-ctrl", label: "CHORD", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 230 },
+
+        // Controls (Fixed on the left)
+        { id: "BATON", type: "baton", label: "BATON", r: 35, isPlayer: false, x: xControls, y: SCORE_TOP + 40 },
+        { id: "KEY", type: "state-ctrl", label: "KEY", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 130 },
+        { id: "MODE", type: "state-ctrl", label: "MODE", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 210 },
+        { id: "CHORD", type: "state-ctrl", label: "CHORD", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 290 },
+        { id: "LEVEL", type: "state-ctrl", label: "HARM", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 370 },
+        
+        // Players (Spread across columns)
+        { id: "B1", type: "bass", label: "B1", r: 35, isPlayer: true, col: 0, minMidi: 24, maxMidi: 72, startMidi: 36 },
+        { id: "C2", type: "cello", label: "C2", r: 30, isPlayer: true, col: 1, minMidi: 36, maxMidi: 84, startMidi: 43 },
+        { id: "C1", type: "cello", label: "C1", r: 30, isPlayer: true, col: 2, minMidi: 36, maxMidi: 84, startMidi: 48 },
+        { id: "VA2", type: "viola", label: "VA2", r: 28, isPlayer: true, col: 3, minMidi: 48, maxMidi: 96, startMidi: 55 },
+        { id: "VA1", type: "viola", label: "VA1", r: 28, isPlayer: true, col: 4, minMidi: 48, maxMidi: 96, startMidi: 60 },
+        { id: "V4", type: "violin", label: "V4", r: 25, isPlayer: true, col: 5, minMidi: 55, maxMidi: 103, startMidi: 67 },
+        { id: "V3", type: "violin", label: "V3", r: 25, isPlayer: true, col: 6, minMidi: 55, maxMidi: 103, startMidi: 72 },
+        { id: "V2", type: "violin", label: "V2", r: 25, isPlayer: true, col: 7, minMidi: 55, maxMidi: 103, startMidi: 76 },
+        { id: "V1", type: "violin", label: "V1", r: 25, isPlayer: true, col: 8, minMidi: 55, maxMidi: 103, startMidi: 79 }
+    ];
+
+    const nodeIndex = new Map(nodesData.map(d => [d.id, d]));
+
+    // Assign X coordinates based on columns
+    nodesData.forEach(d => {
+        if (d.isPlayer) {
+            d.x = xScoreStart + ((d.col + 1) * colSpacing);
+            // We don't set d.y here yet, we'll calculate it via snap logic
+        }
+    });
+
+    const svg = d3.select("#viz").attr("viewBox", [0, 0, width, height]);
+
+    // --- 4. DRAW THE MUSICAL SCORE ---
+    const scoreGroup = svg.append("g").attr("id", "score-background");
+    const chordBackdrop = scoreGroup.append("text")
+        .attr("class", "chord-watermark")
+        .attr("x", xScoreStart + 180)//(xScoreStart + width - 20) / 2)
+        .attr("y", SCORE_TOP + 120)//(SCORE_TOP + SCORE_BOTTOM) / 2)
+        .attr("font-size", Math.min(width * 0.1, 100) + "px")
+        // .text(currentMode);
+        .text(`${currentKey} ${currentMode} ${currentChord}`);
+
+    // --- Unified Staff Configuration ---
+    // All staves are built from Middle C as the origin.
+    // Adjust LINE_SPACING to scale all staves proportionally.
+    // Add/remove staves by specifying their bottom-line offset from Middle C.
+    const MIDDLE_C    = 60;  // MIDI 60 = C4, origin for all staff calculations
+    const LINE_SPACING = 3;  // Semitones between adjacent staff lines
+
+    const NOTE_LETTER_INDEX = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+    const NOTE_NAMES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const NOTE_NAMES_FLAT  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    const MIDDLE_C_Y = yScale(MIDDLE_C);
+    const STAFF_STEP_PX = Math.abs(yScale(MIDDLE_C + LINE_SPACING) - yScale(MIDDLE_C)) / 2;
+
+    function prefersFlatsForDisplay() {
+        // Honors flat keys, and also minor mode if you want "minor => flats".
+        return ['F', 'Bb', 'Eb', 'Ab', 'Db'].includes(currentKey) || currentMode === 'Minor';
+    }
+
+    function midiToDisplayNote(midi, preferFlats = prefersFlatsForDisplay()) {
+        const pc = ((midi % 12) + 12) % 12;
+        const octave = Math.floor(midi / 12) - 1;
+        const names = preferFlats ? NOTE_NAMES_FLAT : NOTE_NAMES_SHARP;
+        return `${names[pc]}${octave}`;
+    }
+
+    function parseDisplayNote(noteName) {
+        const match = /^([A-G])([b#]?)(-?\d+)$/.exec(noteName);
+        if (!match) return { letter: 'C', accidental: '', octave: 4 };
+        return { letter: match[1], accidental: match[2], octave: Number(match[3]) };
+    }
+
+    function noteNameToStaffStep(noteName) {
+        const { letter, octave } = parseDisplayNote(noteName);
+        return ((octave - 4) * 7) + NOTE_LETTER_INDEX[letter];
+    }
+
+    function staffStepToY(step) {
+        return MIDDLE_C_Y - (step * STAFF_STEP_PX);
+    }
+
+    function yToStaffStep(y) {
+        return Math.round((MIDDLE_C_Y - y) / STAFF_STEP_PX);
+    }
+
+    function midiToStaffStep(midi, preferFlats = prefersFlatsForDisplay()) {
+        return noteNameToStaffStep(midiToDisplayNote(midi, preferFlats));
+    }
+
+    function midiToDisplayY(midi, preferFlats = prefersFlatsForDisplay()) {
+        return staffStepToY(midiToStaffStep(midi, preferFlats));
+    }
+
+    function getValidChordNotes(minMidi, maxMidi) {
+        const validNotes = [];
+        const rootOffset = keyRoots[currentKey];
+        const intervals = chordIntervals[currentMode][currentChord];
+
+        for (let oct = 0; oct <= 8; oct++) {
+            const baseMidi = (oct + 1) * 12 + rootOffset;
+            intervals.forEach(interval => {
+                const note = baseMidi + interval;
+                if (note >= minMidi && note <= maxMidi) validNotes.push(note);
+            });
+        }
+
+        return [...new Set(validNotes)].sort((a, b) => a - b);
+    }
+
+    function getClosestChordNoteForStaffStep(targetStep, currentMidi, minMidi, maxMidi) {
+        const validNotes = getValidChordNotes(minMidi, maxMidi);
+        if (validNotes.length === 0) return minMidi;
+
+        const currentStep = midiToStaffStep(currentMidi);
+        const movingUp = targetStep > currentStep;
+        const movingDown = targetStep < currentStep;
+
+        const ranked = validNotes
+            .map(midi => ({ midi, step: midiToStaffStep(midi) }))
+            .sort((a, b) => {
+                const aDistance = Math.abs(a.step - targetStep);
+                const bDistance = Math.abs(b.step - targetStep);
+
+                if (aDistance !== bDistance) return aDistance - bDistance;
+                if (movingUp && a.step !== b.step) return b.step - a.step;
+                if (movingDown && a.step !== b.step) return a.step - b.step;
+                return Math.abs(a.midi - currentMidi) - Math.abs(b.midi - currentMidi);
+            });
+
+        if (movingUp) {
+            const upward = ranked.filter(r => r.step > currentStep);
+            if (upward.length) return upward[0].midi;
+        }
+
+        if (movingDown) {
+            const downward = ranked.filter(r => r.step < currentStep);
+            if (downward.length) return downward[0].midi;
+        }
+
+        return ranked[0].midi;
+    }
+
+    function generateStaff(name, offsetFromMiddleC) {
+        const midiLines = [];
+        for (let i = 0; i < 5; i++) {
+            midiLines.push(MIDDLE_C + offsetFromMiddleC + (i * LINE_SPACING));
+        }
+        return { name, midiLines };
+    }
+
+    // Each entry: name + semitone offset of the BOTTOM line from Middle C (C4 = 0)
+    const staves = [
+        generateStaff("Treble",  3),   // Bottom line E4  = C4 + 4
+        // generateStaff("Alto", -7),  // Bottom line F3  = C4 - 7  (uncomment to add)
+        generateStaff("Bass",   -15),  // Bottom line G2  = C4 - 16
+    ];
+
+    staves.forEach(staff => {
+        // Draw the 5 horizontal lines
+        staff.midiLines.forEach(midi => {
+            scoreGroup.append("line")
+                .attr("class", "staff-line")
+                .attr("x1", xScoreStart - 50)
+                .attr("x2", width - 20)
+                .attr("y1", yScale(midi))
+                .attr("y2", yScale(midi));
+        });
+        
+        // Add Clef Symbol (Bravura music font) or text fallback
+        const staffSpace = Math.abs(yScale(staff.midiLines[0]) - yScale(staff.midiLines[1]));
+        const clefFontSize = staffSpace * 4; // SMuFL: 1em = 4 staff spaces = full staff height
+
+        if (staff.name === "Treble") {
+            // G clef — baseline at bottom staff line, G-curl lands on 2nd line (G4)
+            scoreGroup.append("text")
+                .attr("class", "clef-symbol")
+                .attr("x", xScoreStart - 48)
+                .attr("y", yScale(staff.midiLines[1]))
+                .attr("font-size", clefFontSize + "px")
+                .text("\uE050");
+        } else if (staff.name === "Bass") {
+            // F clef — baseline at bottom staff line, dot lands on 4th line (F3)
+            scoreGroup.append("text")
+                .attr("class", "clef-symbol")
+                .attr("x", xScoreStart - 48)
+                .attr("y", yScale(staff.midiLines[3]))
+                .attr("font-size", clefFontSize + "px")
+                .text("\uE062");
+        } else {
+            scoreGroup.append("text")
+                .attr("class", "clef-label")
+                .attr("x", xScoreStart - 120)
+                .attr("y", yScale(staff.midiLines[2]) + 8)
+                .text(staff.name);
+        }
+    });
+
+    // Draw Middle C — derived from the same MIDDLE_C constant
+    scoreGroup.append("line")
+        .attr("class", "staff-line middle-c")
+        .attr("x1", xScoreStart - 50)
+        .attr("x2", width - 20)
+        .attr("y1", yScale(MIDDLE_C))
+        .attr("y2", yScale(MIDDLE_C));
+
+    scoreGroup.append("text")
+        .attr("class", "clef-label")
+        .attr("x", xScoreStart - 70)
+        .attr("y", yScale(MIDDLE_C) + 4)
+        .style("fill", "#bbb")
+        .style("font-size", "11px")
+        .text("C4");
+
+    // Draw transparent Range Guides for each column
+    nodesData.filter(d => d.isPlayer).forEach(d => {
+        scoreGroup.append("line")
+            .attr("class", "range-line")
+            .attr("x1", d.x).attr("x2", d.x)
+            .attr("y1", midiToDisplayY(d.minMidi)).attr("y2", midiToDisplayY(d.maxMidi));
+    });
+
+    // --- 5. RENDER NODES ---
+    const nodeElements = svg.append("g")
+        .selectAll("g")
+        .data(nodesData).join("g")
+        .attr("class", "node")
+        .attr("id", d => `node-${d.id}`);
+
+    nodeElements.append("circle")
+        .attr("r", d => d.r).attr("class", d => d.type);
+
+    nodeElements.append("text").attr("class", "label").text(d => d.label);
+    nodeElements.append("text").attr("class", "note").text("");
+
+    function flashBackground() {
+        const previous = document.body.style.backgroundColor;
+        document.body.style.backgroundColor = '#f0f4ff';
+        setTimeout(() => {
+            document.body.style.backgroundColor = previous || '';
+        }, 140);
+    }
+
+    function flashNode(nodeOrId, duration = 180) {
+        const node = typeof nodeOrId === 'string' ? nodeIndex.get(nodeOrId) : nodeOrId;
+        if (!node) return;
+
+        const circle = d3.select(`#node-${node.id} circle`);
+        circle.style('filter', 'brightness(2) drop-shadow(0 0 12px rgba(0,0,0,0.18))');
+        setTimeout(() => {
+            circle.style('filter', 'none');
+        }, duration);
+    }
+
+    function getNextChordToneForNode(d) {
+        const validNotes = getValidChordNotes(d.minMidi, d.maxMidi);
+        if (!validNotes.length) return d.startMidi;
+
+        if (typeof d.sequenceIndex !== 'number') {
+            let nearestIndex = 0;
+            let nearestDistance = Number.POSITIVE_INFINITY;
+            validNotes.forEach((note, index) => {
+                const distance = Math.abs(note - d.startMidi);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestIndex = index;
+                }
+            });
+            d.sequenceIndex = nearestIndex;
+        }
+
+        const midi = validNotes[d.sequenceIndex % validNotes.length];
+        d.sequenceIndex = (d.sequenceIndex + 1) % validNotes.length;
+        return midi;
+    }
+
+    function playPlayerNode(d) {
+        if (!d || !d.noteName) return;
+        if (Tone.context.state !== 'running') return;
+        orchestra.play(d.type, d.noteName, NOTE_DURATIONS[d.type] || '8n');
+    }
+
+    function triggerPlayerNode(d, shouldAdvance = true) {
+        if (!d || !d.isPlayer) return;
+        const nextMidi = shouldAdvance ? getNextChordToneForNode(d) : (d.midi || d.startMidi);
+        applyPitchToNode(d, nextMidi, true);
+        playPlayerNode(d);
+        flashNode(d);
+    }
+
+    function setHubStatus(message) {
+        document.getElementById('hub-status').innerText = message;
+    }
+
+    function setHubLast(line) {
+        document.getElementById('hub-last').innerText = `LAST: ${line || '—'}`;
+    }
+
+    function refreshHubUi() {
+        const connected = !!serialState.port;
+        document.getElementById('connectHubBtn').innerText = connected ? 'Disconnect Hub' : 'Connect Hub';
+        document.getElementById('instrumentSet').disabled = connected;
+    }
+
+    class LineBreakTransformer {
+        constructor() {
+            this.chunks = '';
+        }
+        transform(chunk, controller) {
+            this.chunks += chunk;
+            const lines = this.chunks.split(/\r?\n/);
+            this.chunks = lines.pop();
+            lines.forEach(line => controller.enqueue(line));
+        }
+        flush(controller) {
+            if (this.chunks) controller.enqueue(this.chunks);
+        }
+    }
+
+    function parseHubPacket(rawLine) {
+        const line = (rawLine || '').trim();
+        if (!line) return null;
+
+        const match = /^([A-Z0-9]+)\s*:\s*(-?\d+)$/.exec(line);
+        if (!match) return null;
+
+        const id = match[1];
+        const value = Number(match[2]);
+
+        if (!HUB_IDS.has(id) || Number.isNaN(value)) return null;
+
+        return { id, value, rawLine: line };
+    }
+
+    function updateTempoFromTap() {
+        const now = performance.now();
+        serialState.tapTimes.push(now);
+        serialState.tapTimes = serialState.tapTimes.filter(time => now - time < 5000);
+
+        if (serialState.tapTimes.length < 2) return;
+
+        const intervals = [];
+        for (let i = 1; i < serialState.tapTimes.length; i += 1) {
+            const delta = serialState.tapTimes[i] - serialState.tapTimes[i - 1];
+            if (delta >= 250 && delta <= 2000) intervals.push(delta);
+        }
+
+        if (!intervals.length) return;
+
+        const averageInterval = intervals.reduce((sum, value) => sum + value, 0) / intervals.length;
+        currentBpm = Math.max(40, Math.min(200, Math.round(60000 / averageInterval)));
+    }
+
+    function handleHubBaton(value) {
+        flashNode('BATON');
+        flashBackground();
+
+        if (value >= 40 && value <= 200) {
+            currentBpm = value;
+        } else {
+            updateTempoFromTap();
+        }
+
+        Tone.Transport.bpm.rampTo(currentBpm, 0.08);
+        updateControlStateText();
+        updateHudState();
+    }
+
+    function handleHubKey(value) {
+        const safeIndex = Math.max(0, Math.min(ORCHESTRA_KEY_ORDER.length - 1, value));
+        currentKey = ORCHESTRA_KEY_ORDER[safeIndex];
+        currentMode = 'Major';
+        flashNode('KEY');
+        updateGlobalState();
+    }
+
+    function handleHubDissonance(value) {
+        currentDissonance = Math.max(0, Math.min(5, value));
+        currentHarmonyLevel = currentDissonance >= 3 ? 'Advanced' : 'Simple';
+
+        const targetChord = DISSONANCE_TO_CHORD[currentDissonance] || 'I';
+        const validChords = getCurrentChordPalette();
+        currentChord = validChords.includes(targetChord) ? targetChord : validChords[validChords.length - 1];
+
+        flashNode('LEVEL');
+        updateGlobalState();
+    }
+
+    function dispatchHubPacket(packet) {
+        if (!packet) return;
+
+        setHubLast(packet.rawLine);
+
+        if (PLAYER_IDS.has(packet.id)) {
+            if (packet.value !== 0) triggerPlayerNode(nodeIndex.get(packet.id), true);
+            return;
+        }
+
+        if (packet.id === 'T') {
+            handleHubBaton(packet.value);
+            return;
+        }
+
+        if (packet.id === 'K') {
+            handleHubKey(packet.value);
+            return;
+        }
+
+        if (packet.id === 'D') {
+            handleHubDissonance(packet.value);
+        }
+    }
+
+    function handleRawHubLine(rawLine) {
+        const line = (rawLine || '').trim();
+        if (!line) return;
+
+        serialState.lastRawLine = line;
+        const packet = parseHubPacket(line);
+
+        if (!packet) {
+            serialState.malformedCount += 1;
+            setHubLast(line);
+            setHubStatus(`SERIAL: CONNECTED | BAD: ${serialState.malformedCount}`);
+            return;
+        }
+
+        setHubStatus('SERIAL: CONNECTED');
+        dispatchHubPacket(packet);
+    }
+
+    async function readHubLoop() {
+        try {
+            while (serialState.keepReading && serialState.reader) {
+                const { value, done } = await serialState.reader.read();
+                if (done) break;
+                if (typeof value === 'string') handleRawHubLine(value);
+            }
+        } catch (error) {
+            console.error('Serial read error:', error);
+            setHubStatus(`SERIAL: ERROR`);
+        } finally {
+            if (serialState.keepReading) {
+                await disconnectHub(true);
+            }
+        }
+    }
+
+    async function connectHub() {
+        if (!('serial' in navigator)) {
+            setHubStatus('SERIAL: WEB SERIAL UNSUPPORTED');
+            return;
+        }
+
+        try {
+            document.getElementById('instrumentSet').value = 'Full Strings';
+            applyInstrumentPreset('Full Strings');
+
+            serialState.port = await navigator.serial.requestPort();
+            await serialState.port.open({ baudRate: 115200 });
+
+            const decoder = new TextDecoderStream();
+            serialState.inputDone = serialState.port.readable.pipeTo(decoder.writable);
+            serialState.reader = decoder.readable
+                .pipeThrough(new TransformStream(new LineBreakTransformer()))
+                .getReader();
+
+            serialState.keepReading = true;
+            setHubStatus('SERIAL: CONNECTED');
+            setHubLast('—');
+            refreshHubUi();
+            readHubLoop();
+        } catch (error) {
+            console.error('Serial connect error:', error);
+            serialState.keepReading = false;
+            if (serialState.reader) {
+                try { serialState.reader.releaseLock(); } catch (releaseError) {}
+                serialState.reader = null;
+            }
+            if (serialState.port) {
+                try { await serialState.port.close(); } catch (closeError) {}
+                serialState.port = null;
+            }
+            setHubStatus('SERIAL: CONNECTION FAILED');
+            refreshHubUi();
+        }
+    }
+
+    async function disconnectHub(fromReader = false) {
+        serialState.keepReading = false;
+
+        if (serialState.reader) {
+            try { await serialState.reader.cancel(); } catch (cancelError) {}
+            try { serialState.reader.releaseLock(); } catch (releaseError) {}
+            serialState.reader = null;
+        }
+
+        if (serialState.inputDone) {
+            try { await serialState.inputDone; } catch (pipeError) {}
+            serialState.inputDone = null;
+        }
+
+        if (serialState.port) {
+            try { await serialState.port.close(); } catch (closeError) {}
+            serialState.port = null;
+        }
+
+        setHubStatus(fromReader ? 'SERIAL: DISCONNECTED' : 'SERIAL: DISCONNECTED');
+        refreshHubUi();
+    }
+
+    function triggerDemoPacket() {
+        const options = ['T:1', 'K:0', 'K:1', 'K:2', 'K:3', 'D:0', 'D:2', 'D:4', 'D:5',
+            'B1:1', 'C1:1', 'C2:1', 'VA1:1', 'VA2:1', 'V1:1', 'V2:1', 'V3:1', 'V4:1'];
+        const line = options[Math.floor(Math.random() * options.length)];
+        handleRawHubLine(line);
+    }
+
+    if ('serial' in navigator) {
+        navigator.serial.addEventListener('disconnect', async (event) => {
+            if (serialState.port && event.target === serialState.port) {
+                await disconnectHub(true);
+            }
+        });
+    }
+
+
+    // --- 6. POSITION & SNAP LOGIC ---
+    function applyPitchToNode(d, midi, animate = true) {
+        d.midi = midi;
+        d.noteName = Tone.Frequency(d.midi, "midi").toNote(); // keep sharp spelling for playback
+        d.displayNote = midiToDisplayNote(d.midi);            // display can use flats
+        d.y = midiToDisplayY(d.midi);
+
+        if (animate) {
+            d3.select(`#node-${d.id}`).transition().duration(300).attr("transform", `translate(${d.x},${d.y})`);
+        } else {
+            d3.select(`#node-${d.id}`).attr("transform", `translate(${d.x},${d.y})`);
+        }
+
+        d3.select(`#node-${d.id} text.note`).text(d.displayNote);
+    }
+
+    function updatePitchAndPosition(d, rawMidiOverride = null, direction = 'closest', animate = true) {
+        if (!d.isPlayer) return;
+
+        let targetMidi = rawMidiOverride !== null ? rawMidiOverride : d.startMidi;
+        targetMidi = Math.max(d.minMidi, Math.min(d.maxMidi, targetMidi));
+
+        // Random reharmonization can keep the old MIDI-based voice-leading logic.
+        // Manual drag should NOT use the bass root bias / random leap code path.
+        const snappedMidi = direction === 'random'
+            ? getClosestChordNote(targetMidi, d.minMidi, d.maxMidi, direction, d.type)
+            : getClosestChordNote(targetMidi, d.minMidi, d.maxMidi, 'closest', 'none');
+
+        applyPitchToNode(d, snappedMidi, animate);
+    }
+
+    function updateAllPitches(direction = 'closest') {
+        nodesData.forEach(d => {
+            if (d.isPlayer) {
+                // Animate when triggering a global update
+                updatePitchAndPosition(d, d.midi || d.startMidi, direction, true);
+            } else {
+                d3.select(`#node-${d.id}`).attr("transform", `translate(${d.x},${d.y})`);
+            }
+        });
+    }
+
+    // --- 7. DRAG HANDLER ---
+    const dragHandler = d3.drag()
+        .on("start", function(event, d) {
+            d3.select(this).classed("dragging", true);
+            d.dragStartY = d.y; // To detect clicks
+        })
+  
+
+        .on("drag", function(event, d) {
+            if (!d.isPlayer) return;
+
+            const currentMidi = d.midi ?? d.startMidi;
+            const targetStep = yToStaffStep(event.y);
+            const snappedMidi = getClosestChordNoteForStaffStep(targetStep, currentMidi, d.minMidi, d.maxMidi);
+
+            applyPitchToNode(d, snappedMidi, false);
+        })
+
+
+        .on("end", function(event, d) {
+            d3.select(this).classed("dragging", false);
+            
+            // Trigger audio if it was a quick click instead of a drag
+            if (Math.abs(d.y - d.dragStartY) < 3) {
+                triggerAction(d);
+            } else if (d.isPlayer && Tone.context.state === 'running') {
+                // Optional: play note on drop
+                playPlayerNode(d);
+                flashNode(d);
+            }
+        });
+
+    nodeElements.call(dragHandler);
+
+   
+    // --- 8. ACTION LOGIC ---
+    function triggerAction(d) {
+        if (d.id === "BATON") {
+            handleHubBaton(1);
+        } 
+        else if (d.id === "KEY") {
+            const nextIndex = (ORCHESTRA_KEY_ORDER.indexOf(currentKey) + 1 + ORCHESTRA_KEY_ORDER.length) % ORCHESTRA_KEY_ORDER.length;
+            handleHubKey(nextIndex);
+        } 
+        else if (d.id === "MODE") {
+            currentMode = currentMode === 'Major' ? 'Minor' : 'Major';
+            updateGlobalState();
+            flashNode('MODE');
+        }
+        else if (d.id === "CHORD") {
+            const chords = getCurrentChordPalette();
+            currentChord = chords[(chords.indexOf(currentChord) + 1) % chords.length];
+            updateGlobalState();
+            flashNode('CHORD');
+        } 
+        else if (d.id === "LEVEL") {
+            handleHubDissonance((currentDissonance + 1) % 6);
+        }
+        else if (d.isPlayer) {
+            triggerPlayerNode(d, true);
+        }
+    }
+
+    function updateControlStateText() {
+        const controlStates = {
+            BATON: `${Math.round(currentBpm)}`,
+            KEY: currentKey,
+            MODE: currentMode,
+            CHORD: currentChord,
+            LEVEL: `D${currentDissonance}`
+        };
+
+        Object.entries(controlStates).forEach(([id, value]) => {
+            const selection = d3.select(`#node-${id} text.note`);
+            if (!selection.empty()) selection.text(value);
+        });
+    }
+
+    function updateGlobalState() {
+        normalizeHarmonySelection();
+        chordBackdrop.text(`${currentKey} ${currentMode} ${currentChord}`);
+        updateControlStateText();
+        updateHudState();
+        updateAllPitches('random');
+    }
+
+
+
+    function updateHudState() {
+        document.getElementById('hud-state').innerText =
+            `KEY: ${currentKey} ${currentMode} | BPM: ${Math.round(currentBpm)} | DISS: ${currentDissonance} | CHORD: ${currentChord} | SET: ${currentInstrumentSet}`;
+    }
+
+    function updateRangeGuides() {
+        const players = nodesData.filter(d => d.isPlayer);
+        scoreGroup.selectAll('line.range-line')
+            .data(players)
+            .attr('x1', d => d.x)
+            .attr('x2', d => d.x)
+            .attr('y1', d => midiToDisplayY(d.minMidi))
+            .attr('y2', d => midiToDisplayY(d.maxMidi));
+    }
+
+    function applyInstrumentPreset(setName) {
+        const preset = INSTRUMENT_PRESETS[setName];
+        if (!preset) return;
+
+        currentInstrumentSet = setName;
+
+        const players = nodesData.filter(d => d.isPlayer).sort((a, b) => a.col - b.col);
+        players.forEach((d, i) => {
+            const config = preset[i % preset.length];
+            d.type = config.type;
+            d.label = config.label;
+            d.startMidi = config.startMidi;
+            d.minMidi = config.minMidi;
+            d.maxMidi = config.maxMidi;
+            d.r = config.r;
+            d.midi = null;
+            d.noteName = null;
+            d.displayNote = null;
+            d.sequenceIndex = undefined;
+
+            d3.select(`#node-${d.id} circle`)
+                .attr('class', d.type)
+                .attr('r', d.r);
+
+            d3.select(`#node-${d.id} text.label`).text(d.label);
+            d3.select(`#node-${d.id} text.note`).text('');
+        });
+
+        updateRangeGuides();
+        updateHudState();
+        updateAllPitches('closest');
+    }
+
+
+    document.getElementById('instrumentSet').addEventListener('change', (event) => {
+        applyInstrumentPreset(event.target.value);
+    });
+
+    document.getElementById('connectHubBtn').addEventListener('click', async () => {
+        if (serialState.port) {
+            await disconnectHub();
+        } else {
+            await connectHub();
+        }
+    });
+
+    document.getElementById('demoBtn').addEventListener('click', () => {
+        triggerDemoPacket();
+    });
+
+    refreshHubUi();
+    updateControlStateText();
+    updateHudState();
+
+    // Initialize System
+    document.getElementById('startBtn').addEventListener('click', async () => {
+        const startBtn = document.getElementById('startBtn');
+        startBtn.innerText = "Loading samples…";
+
+        await Tone.start();
+        await orchestra.loadAll("forte");
+        Tone.Transport.bpm.value = currentBpm;
+        Tone.Transport.start();
+
+        document.getElementById('overlay').style.display = 'none';
+        chordBackdrop.text(`${currentKey} ${currentMode} ${currentChord}`);
+        updateControlStateText();
+        updateHudState();
+        updateAllPitches();
+    });
+
+</script>
+</body>
+</html>

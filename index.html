@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro:bit Exploration · Luddy TechFest 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --iu-crimson: #990000;
+            --iu-crimson-deep: #6f0000;
+            --cream: #f7f2eb;
+            --cream-deep: #efe2d3;
+            --paper: rgba(255, 251, 246, 0.82);
+            --panel: rgba(255, 252, 248, 0.9);
+            --ink: #241a1a;
+            --ink-soft: rgba(36, 26, 26, 0.72);
+            --line: rgba(71, 43, 43, 0.12);
+            --gold: #c9a35d;
+            --sage: #7f9384;
+            --sky: #a7bfd4;
+            --shadow: rgba(66, 35, 35, 0.14);
+            /* ---- CARD ROUNDING CONTROL ----
+               Tweak these three values to change how round every card on the
+               page is. Set any of them to 0 for perfectly square corners. */
+            --radius-panel: 10px;
+            --radius-card: 8px;
+            --radius-slot: 6px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "IBM Plex Sans", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(153, 0, 0, 0.14), transparent 28%),
+                radial-gradient(circle at 88% 12%, rgba(201, 163, 93, 0.18), transparent 20%),
+                linear-gradient(135deg, #f4ece3 0%, var(--cream) 48%, var(--cream-deep) 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.42;
+            background:
+                linear-gradient(rgba(153, 0, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(153, 0, 0, 0.03) 1px, transparent 1px);
+            background-size: 34px 34px;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.72), transparent 90%);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button,
+        input {
+            font: inherit;
+        }
+
+        .page {
+            position: relative;
+            width: min(1220px, calc(100vw - 32px));
+            margin: 0 auto;
+            padding: 26px 0 48px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+
+        .brand-stack {
+            display: grid;
+            gap: 6px;
+        }
+
+        .brand-mark {
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--iu-crimson);
+        }
+
+        .brand-title {
+            font-family: "Newsreader", serif;
+            font-size: 1.4rem;
+            letter-spacing: -0.03em;
+        }
+
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .nav a,
+        .hero-link,
+        .pill,
+        .tool-link,
+        .action-row button,
+        input {
+            border-radius: 999px;
+        }
+
+        .nav a {
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.7);
+            box-shadow: 0 12px 28px var(--shadow);
+            font-size: 0.94rem;
+            font-weight: 700;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: var(--radius-panel);
+            background: var(--panel);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 28px 68px var(--shadow);
+        }
+
+        .hero-main {
+            padding: 30px;
+            overflow: hidden;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: var(--iu-crimson);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin: 0;
+        }
+
+        h1,
+        h2 {
+            font-family: "Newsreader", serif;
+            letter-spacing: -0.05em;
+        }
+
+        h1 {
+            max-width: 10ch;
+            font-size: clamp(3rem, 7vw, 5.4rem);
+            line-height: 0.92;
+        }
+
+        .hero-copy {
+            margin-top: 18px;
+            max-width: 42rem;
+            color: var(--ink-soft);
+            font-size: 1.03rem;
+            line-height: 1.7;
+        }
+
+        .brand-shell {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .lockup-slot {
+            min-height: 112px;
+            padding: 16px 18px;
+            border: 1px dashed rgba(153, 0, 0, 0.28);
+            border-radius: var(--radius-slot);
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(245, 233, 222, 0.92));
+        }
+
+        .slot-label {
+            display: inline-block;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(153, 0, 0, 0.08);
+            color: var(--iu-crimson);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .slot-copy {
+            margin-top: 14px;
+            color: var(--ink-soft);
+            line-height: 1.55;
+        }
+
+        .hero-actions,
+        .pill-row,
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .hero-actions {
+            margin-top: 24px;
+        }
+
+        .hero-link {
+            padding: 12px 18px;
+            font-weight: 700;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.74);
+        }
+
+        .hero-link.primary,
+        .action-row button[type="submit"] {
+            border-color: transparent;
+            background: linear-gradient(135deg, var(--iu-crimson), var(--iu-crimson-deep));
+            color: #fff7f4;
+        }
+
+        .pill-row {
+            margin-top: 20px;
+        }
+
+        .pill {
+            padding: 9px 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .hero-side {
+            display: grid;
+            gap: 12px;
+            padding: 24px;
+        }
+
+        .side-card,
+        .experience-card,
+        .brand-card,
+        .registry-item,
+        .empty-state {
+            border-radius: var(--radius-card);
+            border: 1px solid rgba(71, 43, 43, 0.09);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.86), rgba(247, 237, 226, 0.95));
+        }
+
+        .side-card {
+            padding: 18px;
+        }
+
+        .side-card h2 {
+            font-size: 1.4rem;
+        }
+
+        .side-card p {
+            margin-top: 10px;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .section {
+            margin-top: 18px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section-header h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            line-height: 0.95;
+        }
+
+        .section-header p {
+            max-width: 36rem;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .experience-grid,
+        .brand-grid {
+            display: grid;
+            gap: 18px;
+        }
+
+        .experience-grid {
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .brand-grid {
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        .experience-card,
+        .brand-card {
+            padding: 22px;
+            box-shadow: 0 20px 50px rgba(66, 35, 35, 0.1);
+        }
+
+        .card-index {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            background: rgba(153, 0, 0, 0.08);
+            color: var(--iu-crimson);
+            font-family: "IBM Plex Mono", monospace;
+            font-weight: 600;
+        }
+
+        .experience-card h3,
+        .brand-card h3 {
+            margin-top: 22px;
+            font-size: 1.35rem;
+            letter-spacing: -0.03em;
+        }
+
+        .experience-card p,
+        .brand-card p {
+            margin-top: 12px;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .tool-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 22px;
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.76);
+            font-weight: 700;
+        }
+
+        .brand-card .lockup-slot {
+            min-height: 150px;
+            margin-top: 18px;
+        }
+
+        .registry-panel {
+            padding: 28px;
+        }
+
+        .registry-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 18px;
+        }
+
+        .registry-count {
+            color: var(--ink-soft);
+            font-size: 0.94rem;
+            font-weight: 700;
+        }
+
+        .registry-form {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr auto;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .registry-form button {
+            appearance: none;
+            padding: 12px 18px;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--iu-crimson), var(--iu-crimson-deep));
+            color: #fff7f4;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 12px 28px rgba(66, 35, 35, 0.14);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.82);
+            color: var(--ink);
+        }
+
+        .registry-helper {
+            margin-top: 16px;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .action-row {
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        .action-row button {
+            appearance: none;
+            padding: 11px 16px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.76);
+            color: var(--ink);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .registry-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .registry-item,
+        .empty-state {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 18px;
+        }
+
+        .registry-item strong,
+        .registry-item span {
+            display: block;
+        }
+
+        .registry-item strong {
+            font-size: 0.98rem;
+        }
+
+        .registry-item span {
+            margin-top: 4px;
+            color: var(--ink-soft);
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.84rem;
+        }
+
+        .delete-btn {
+            appearance: none;
+            padding: 9px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(153, 0, 0, 0.12);
+            background: rgba(153, 0, 0, 0.08);
+            color: var(--iu-crimson);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            justify-content: flex-start;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        /* ---- Luddy branding overrides ---- */
+        .brand-stack {
+            grid-auto-flow: row;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .brand-lockup {
+            display: block;
+            height: 54px;
+            width: auto;
+        }
+
+        .brand-sublabel {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.72rem;
+            font-weight: 500;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+        }
+
+        /* Photographic hero treatment */
+        .hero-main {
+            position: relative;
+            isolation: isolate;
+            color: #fff8ef;
+            background:
+                linear-gradient(140deg, rgba(111, 0, 0, 0.88) 0%, rgba(36, 6, 6, 0.72) 45%, rgba(20, 12, 12, 0.55) 100%),
+                url("luddy_exterior_hero.jpg") center 30% / cover no-repeat;
+            border-color: rgba(255, 247, 238, 0.22);
+        }
+
+        .hero-main::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border-radius: inherit;
+            background: radial-gradient(circle at 18% 16%, rgba(255, 215, 150, 0.28), transparent 42%);
+            z-index: -1;
+        }
+
+        .hero-main .eyebrow {
+            color: #f4c489;
+        }
+
+        .hero-main h1 {
+            color: #fff8ef;
+            text-shadow: 0 3px 24px rgba(30, 0, 0, 0.38);
+        }
+
+        .hero-main .hero-copy {
+            color: rgba(255, 247, 238, 0.92);
+        }
+
+        .hero-main .pill {
+            background: rgba(255, 248, 239, 0.14);
+            border-color: rgba(255, 248, 239, 0.3);
+            color: #fff8ef;
+            backdrop-filter: blur(6px);
+        }
+
+        .hero-main .pill-link {
+            background: #1b1b1b;
+            color: #ffd84d;
+            border-color: rgba(255, 216, 77, 0.45);
+            font-family: "IBM Plex Mono", monospace;
+            letter-spacing: 0.02em;
+        }
+
+        .hero-main .pill-link:hover {
+            background: #262626;
+        }
+
+        .hero-main .hero-link {
+            background: rgba(255, 248, 239, 0.14);
+            border-color: rgba(255, 248, 239, 0.32);
+            color: #fff8ef;
+            backdrop-filter: blur(6px);
+        }
+
+        .hero-main .hero-link.primary {
+            background: linear-gradient(135deg, #ffb85c, #d67c2c);
+            color: #3a1800;
+            border-color: transparent;
+            box-shadow: 0 18px 36px rgba(28, 5, 0, 0.36);
+        }
+
+        .hero-main .lockup-slot {
+            background: linear-gradient(155deg, rgba(255, 250, 242, 0.96), rgba(248, 233, 214, 0.92));
+            border-color: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 18px 36px rgba(28, 5, 0, 0.28);
+        }
+
+        .hero-main .slot-copy {
+            color: var(--ink-soft);
+        }
+
+        .hero-lockup-img {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 72px;
+            object-fit: contain;
+            object-position: left center;
+        }
+
+        .event-card {
+            display: grid;
+            gap: 4px;
+            padding: 4px 2px;
+            color: var(--ink);
+        }
+
+        .event-card .event-kicker {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.68rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--iu-crimson);
+            font-weight: 700;
+        }
+
+        .event-card .event-title {
+            font-family: "Newsreader", serif;
+            font-size: 1.18rem;
+            letter-spacing: -0.02em;
+            line-height: 1.15;
+        }
+
+        .event-card .event-meta {
+            color: var(--ink-soft);
+            font-size: 0.86rem;
+            line-height: 1.45;
+        }
+
+        /* Photo credit pin */
+        .photo-credit {
+            position: absolute;
+            right: 14px;
+            bottom: 12px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.62rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(255, 247, 238, 0.65);
+            pointer-events: none;
+        }
+
+        @media (max-width: 980px) {
+            .topbar,
+            .section-header,
+            .registry-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .hero {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-shell,
+            .registry-form {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-lockup {
+                height: 44px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <a class="brand-stack" href="index.html" aria-label="Luddy School of Informatics, Computing, and Engineering home">
+                <img class="brand-lockup" src="luddy_lockup_WEB_h1.png" alt="Luddy School of Informatics, Computing, and Engineering — Indiana University">
+                <span class="brand-sublabel">TechFest 2026 · Micro:bit Exploration</span>
+            </a>
+            <nav class="nav" aria-label="Primary">
+                <a href="index.html">Home</a>
+                <a href="string_ensemble_baton_nodes.html">Orchestra</a>
+                <a href="microbit_luddy_characters.html">Characters</a>
+                <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+                <a href="control_worksheet.html">Worksheet</a>
+                <a href="microbit_code_monitor.html">Monitor</a>
+            </nav>
+        </header>
+
+        <section class="hero">
+            <article class="panel hero-main">
+                <div class="brand-shell">
+                    <div class="lockup-slot">
+                        <img class="hero-lockup-img" src="luddy_lockup_WEB_h1.png" alt="Luddy School of Informatics, Computing, and Engineering">
+                    </div>
+                    <div class="lockup-slot">
+                        <div class="event-card">
+                            <span class="event-kicker">Luddy TechFest · April 11, 2026</span>
+                            <span class="event-title">Micro:bit Exploration &amp; Physical Computing</span>
+                            <span class="event-meta">Luddy Hall · Bloomington, IN<br>A hands-on station presented by the Luddy School</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="eyebrow">Hands-On Station · All Ages Welcome</p>
+                <h1>Shake it. Tilt it. Hear the whole room play along.</h1>
+                <p class="hero-copy">Welcome to Micro:bit Exploration, a physical computing playground at Luddy TechFest. Pick up a tiny computer called a <strong>micro:bit</strong>, press a button, tilt it sideways, or give it a shake — and watch a giant screen turn your movement into music, characters, and living drawings. Everyone in the room becomes part of one instrument.</p>
+
+                <div class="hero-actions">
+                    <a class="hero-link primary" href="string_ensemble_baton_nodes.html">Play the Orchestra</a>
+                    <a class="hero-link" href="microbit_luddy_characters.html">Meet the Characters</a>
+                    <a class="hero-link" href="microbit_drawing_canvas.html">Draw with Motion</a>
+                </div>
+
+                <div class="pill-row">
+                    <div class="pill">Grab a micro:bit</div>
+                    <div class="pill">Tilt, shake, press</div>
+                    <div class="pill">Play together</div>
+                    <div class="pill">No coding needed to start</div>
+                    <a class="pill pill-link" href="https://makecode.microbit.org/S69783-61882-73735-46759" target="_blank" rel="noopener">&lt;/&gt; Open the code in MakeCode</a>
+                </div>
+                <div class="photo-credit">Photo: Luddy Hall, Fall 2024</div>
+            </article>
+
+            <aside class="panel hero-side">
+                <div class="side-card">
+                    <p class="eyebrow">What Is a Micro:bit?</p>
+                    <h2>A tiny computer that fits in your palm.</h2>
+                    <p>Each micro:bit has buttons, a light sensor, and can feel when you tilt or shake it. Today, every one of them is wirelessly connected to this room, so the moment you move yours, something on screen moves too.</p>
+                </div>
+                <div class="side-card">
+                    <p class="eyebrow">How to Join In</p>
+                    <h2>Pick a station. Try a move. Share the mic.</h2>
+                    <p>Step up to any station and grab a labeled micro:bit. Try pressing Button A, tilting left or right, or shaking it. Listen and look for your change on the big screen — then pass it to the next person in line.</p>
+                </div>
+                <div class="side-card">
+                    <p class="eyebrow">For Grown-ups &amp; Teachers</p>
+                    <h2>Physical computing, made welcoming.</h2>
+                    <p>This exhibit shows how a single radio hub can turn a roomful of micro:bits into a shared creative instrument. The student firmware is an open MakeCode project you can <a href="https://makecode.microbit.org/S69783-61882-73735-46759" target="_blank" rel="noopener" style="color: var(--iu-crimson); text-decoration: underline;">open, fork, and flash</a> to take back to your classroom, club, or library.</p>
+                </div>
+            </aside>
+        </section>
+
+        <section class="section" id="experiences">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">Four Ways To Play</p>
+                    <h2>Pick a station. Make something happen.</h2>
+                </div>
+                <p>Each station turns a micro:bit move into something you can see or hear across the room. Try them all, then come back to your favorite.</p>
+            </div>
+
+            <div class="experience-grid">
+                <article class="experience-card">
+                    <span class="card-index">01</span>
+                    <h3>String Orchestra</h3>
+                    <p>Become a violin, viola, cello, or bass. Press a button to play a note — and a friend with the conductor baton can speed up the whole orchestra by waving theirs.</p>
+                    <a class="tool-link" href="string_ensemble_baton_nodes.html">Play the Orchestra →</a>
+                </article>
+
+                <article class="experience-card">
+                    <span class="card-index">02</span>
+                    <h3>Micro:bit Characters</h3>
+                    <p>Every micro:bit becomes a little glowing character on a big-screen commons. Tilt yours to nudge it around, shine a light at it to grow its halo, and watch the crowd come to life.</p>
+                    <a class="tool-link" href="microbit_luddy_characters.html">Meet the Characters →</a>
+                </article>
+
+                <article class="experience-card">
+                    <span class="card-index">03</span>
+                    <h3>Motion Sketch Pad</h3>
+                    <p>Draw without a pencil! Your tilts turn into colorful trails on a shared canvas. Save your picture at the end and take a screenshot home.</p>
+                    <a class="tool-link" href="microbit_drawing_canvas.html">Draw with Motion →</a>
+                </article>
+
+                <article class="experience-card">
+                    <span class="card-index">04</span>
+                    <h3>Inventor's Worksheet</h3>
+                    <p>Got a big idea? Use our printable planner to design your own micro:bit effect. Decide which button does what, then dream up a new behavior of your own.</p>
+                    <a class="tool-link" href="control_worksheet.html">Open the Worksheet →</a>
+                </article>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">What You're Actually Doing</p>
+                    <h2>You're writing a little music for the real world.</h2>
+                </div>
+                <p>"Physical computing" just means you make the computer react to something physical — a button, a tilt, a shake. Here's how today's station pulls it off.</p>
+            </div>
+
+            <div class="brand-grid">
+                <article class="brand-card">
+                    <span class="card-index">A</span>
+                    <h3>Your micro:bit senses you.</h3>
+                    <p>When you press a button or tilt the board, tiny sensors inside the micro:bit notice what just happened — the same way your phone knows which way you're holding it.</p>
+                </article>
+
+                <article class="brand-card">
+                    <span class="card-index">B</span>
+                    <h3>It whispers over radio.</h3>
+                    <p>Your micro:bit quietly sends a short message through the air to a "hub" micro:bit plugged into our laptop. One hub listens to the whole room at once.</p>
+                </article>
+
+                <article class="brand-card">
+                    <span class="card-index">C</span>
+                    <h3>The room reacts together.</h3>
+                    <p>The laptop turns those messages into music notes, moving characters, or new lines on a drawing — all live, all shared. The more people play, the wilder it gets.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section panel registry-panel" id="registry">
+            <div class="registry-top">
+                <div>
+                    <p class="eyebrow">Facilitator Setup · Device Registry</p>
+                    <h2>Name each micro:bit before the room shows up.</h2>
+                </div>
+                <div class="registry-count" id="registryCount">0 saved</div>
+            </div>
+
+            <form class="registry-form" id="registryForm">
+                <input id="serialInput" name="serial" inputmode="numeric" placeholder="Micro:bit serial number" aria-label="Microbit serial number">
+                <input id="labelInput" name="label" placeholder="Friendly name (e.g. Violin 1, Baton, Station A)" aria-label="Friendly label">
+                <button type="submit">Save Device</button>
+            </form>
+
+            <p class="registry-helper" id="registryHelper">Give each board a friendly name so the screens can say "Violin 1 just played" instead of a long serial number. Everything is saved locally on this laptop. Import and export use the shared registry.json file.</p>
+
+            <div class="action-row">
+                <button id="importRegistryBtn" type="button">Import Registry</button>
+                <button id="exportRegistryBtn" type="button">Export Registry</button>
+                <button id="clearRegistryBtn" type="button">Clear Registry</button>
+            </div>
+
+            <div class="registry-list" id="registryList"></div>
+        </section>
+    </main>
+
+    <input id="registryFileInput" type="file" accept="application/json,.json" hidden>
+
+    <script>
+        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+
+        const registryForm = document.getElementById("registryForm");
+        const serialInput = document.getElementById("serialInput");
+        const labelInput = document.getElementById("labelInput");
+        const registryList = document.getElementById("registryList");
+        const registryCount = document.getElementById("registryCount");
+        const registryHelper = document.getElementById("registryHelper");
+        const importRegistryBtn = document.getElementById("importRegistryBtn");
+        const exportRegistryBtn = document.getElementById("exportRegistryBtn");
+        const clearRegistryBtn = document.getElementById("clearRegistryBtn");
+        const registryFileInput = document.getElementById("registryFileInput");
+
+        const state = {
+            registry: loadRegistry()
+        };
+
+        function loadRegistry() {
+            try {
+                const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveRegistry() {
+            window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+        }
+
+        function isValidMicrobitSerial(id) {
+            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
+            const numericId = Number(id);
+            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
+        }
+
+        function normalizeRegistryShape(parsed) {
+            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+                : {};
+
+            return Object.fromEntries(
+                Object.entries(candidate)
+                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
+                    .map(([serial, label]) => [serial, label.trim()])
+            );
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function renderRegistry() {
+            const entries = Object.entries(state.registry)
+                .sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+
+            registryCount.textContent = `${entries.length} saved`;
+
+            if (!entries.length) {
+                registryHelper.textContent = "Give each board a friendly name so the screens can say \"Violin 1 just played\" instead of a long serial number. Everything is saved locally on this laptop. Import and export use the shared registry.json file.";
+                registryList.innerHTML = '<div class="empty-state">No micro:bits saved yet. Add a serial number and a friendly name to get the room ready for visitors.</div>';
+                return;
+            }
+
+            registryHelper.textContent = "Tip: friendly names like Baton, Violin 1, or Station A make the big-screen callouts easy for visitors to follow.";
+            registryList.innerHTML = entries.map(([serial, label]) => `
+                <div class="registry-item">
+                    <div>
+                        <strong>${escapeHtml(label)}</strong>
+                        <span>${escapeHtml(serial)}</span>
+                    </div>
+                    <button class="delete-btn" type="button" data-serial="${escapeHtml(serial)}">Remove</button>
+                </div>
+            `).join("");
+        }
+
+        function downloadRegistry() {
+            const blob = new Blob([JSON.stringify(state.registry, null, 2)], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "registry.json";
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 250);
+        }
+
+        registryForm.addEventListener("submit", event => {
+            event.preventDefault();
+            const serial = serialInput.value.trim();
+            const label = labelInput.value.trim();
+
+            if (!isValidMicrobitSerial(serial)) {
+                registryHelper.textContent = "That doesn't look like a micro:bit serial number yet — try a whole number only.";
+                serialInput.focus();
+                return;
+            }
+
+            if (!label) {
+                registryHelper.textContent = "Add a friendly name (like Violin 1 or Station A) so the big screen can call it out clearly.";
+                labelInput.focus();
+                return;
+            }
+
+            state.registry[serial] = label;
+            saveRegistry();
+            renderRegistry();
+            registryForm.reset();
+            serialInput.focus();
+        });
+
+        registryList.addEventListener("click", event => {
+            const button = event.target.closest(".delete-btn");
+            if (!button) return;
+            delete state.registry[button.dataset.serial];
+            saveRegistry();
+            renderRegistry();
+        });
+
+        exportRegistryBtn.addEventListener("click", () => {
+            downloadRegistry();
+        });
+
+        clearRegistryBtn.addEventListener("click", () => {
+            state.registry = {};
+            saveRegistry();
+            renderRegistry();
+        });
+
+        importRegistryBtn.addEventListener("click", () => {
+            registryFileInput.click();
+        });
+
+        registryFileInput.addEventListener("change", async event => {
+            const [file] = event.target.files || [];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+                state.registry = normalizeRegistryShape(parsed);
+                saveRegistry();
+                renderRegistry();
+            } catch (error) {
+                registryHelper.textContent = "Hmm — that file didn't look like a TechFest registry.json. Double-check the file and try again.";
+            } finally {
+                registryFileInput.value = "";
+            }
+        });
+
+        renderRegistry();
+    </script>
+</body>
+</html>

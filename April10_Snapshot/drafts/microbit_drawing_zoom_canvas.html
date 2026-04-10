@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Micro:bit Drawing Composer</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Avenir Next", "Helvetica Neue", sans-serif;
+            color: #111827;
+            background: #fff;
+        }
+        .page {
+            min-height: 100vh;
+            padding: 18px;
+        }
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        h1, p { margin: 0; }
+        h1 {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .subtle {
+            margin-top: 6px;
+            color: #6b7280;
+            font-size: 0.92rem;
+        }
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        button {
+            appearance: none;
+            border: 1px solid rgba(17, 24, 39, 0.12);
+            border-radius: 999px;
+            padding: 10px 14px;
+            background: #fff;
+            color: #111827;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button:hover { background: #f3f4f6; }
+        .control-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border: 1px solid rgba(17, 24, 39, 0.12);
+            border-radius: 999px;
+            background: #fff;
+            font-size: 0.92rem;
+        }
+        .control-pill input[type="range"] {
+            width: 120px;
+        }
+        .canvas-wrap {
+            position: relative;
+            height: calc(100vh - 110px);
+        }
+        canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            border: 1px solid rgba(17, 24, 39, 0.12);
+            border-radius: 18px;
+        }
+        #worldCanvas {
+            background: #fff;
+        }
+        #nodeCanvas {
+            background: transparent;
+        }
+        @media (max-width: 980px) {
+            .toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .canvas-wrap {
+                height: 75vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="toolbar">
+            <div>
+                <h1>Micro:bit Drawing Composer</h1>
+                <p class="subtle">A larger composer space viewed through a zoomed-out window. Registered devices only. A toggles pen. B shifts rainbow color.</p>
+            </div>
+            <div class="button-row">
+                <button id="connectBtn" type="button">Connect Hub</button>
+                <button id="clearBtn" type="button">Clear Drawing</button>
+                <button id="simulateBtn" type="button">Start Demo</button>
+                <button id="zoomOutBtn" type="button">Zoom Out</button>
+                <button id="zoomInBtn" type="button">Zoom In</button>
+                <span class="control-pill">Zoom <strong id="zoomValue">10%</strong></span>
+                <label class="control-pill" for="opacityRange">
+                    Opacity
+                    <input id="opacityRange" type="range" min="0.05" max="1" step="0.05" value="0.35" />
+                    <strong id="opacityValue">35%</strong>
+                </label>
+            </div>
+        </div>
+
+        <div class="canvas-wrap">
+            <canvas id="worldCanvas"></canvas>
+            <canvas id="nodeCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+        const REGISTRY_FILE_PATH = "registry.json";
+        const MAX_VISIBLE_NODES = 8;
+        const DEMO_IDS = ["SIM-1", "SIM-2", "SIM-3", "SIM-4"];
+        const RAINBOW = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"];
+        const COMPOSER_WORLD = {
+            width: 12000,
+            height: 8000
+        };
+
+        const state = {
+            nodes: new Map(),
+            registry: {},
+            simulationRunning: false,
+            simulationTimer: null,
+            zoom: 0.10,
+            lineOpacity: 0.35,
+            viewportCenterX: COMPOSER_WORLD.width / 2,
+            viewportCenterY: COMPOSER_WORLD.height / 2,
+            serial: {
+                port: null,
+                reader: null,
+                inputDone: null,
+                keepReading: false
+            }
+        };
+
+        const worldCanvas = document.getElementById("worldCanvas");
+        const nodeCanvas = document.getElementById("nodeCanvas");
+        const worldCtx = worldCanvas.getContext("2d");
+        const nodeCtx = nodeCanvas.getContext("2d");
+
+        function loadRegistry() {
+            try {
+                const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveRegistry() {
+            window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+        }
+
+        function normalizeRegistryShape(parsed) {
+            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+                : {};
+
+            return Object.fromEntries(
+                Object.entries(candidate)
+                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
+                    .map(([serial, label]) => [serial, label.trim()])
+            );
+        }
+
+        async function loadRegistryFromFile() {
+            try {
+                const response = await fetch(`${REGISTRY_FILE_PATH}?v=${Date.now()}`, { cache: "no-store" });
+                if (!response.ok) return {};
+                const parsed = await response.json();
+                return normalizeRegistryShape(parsed);
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function isValidMicrobitSerial(id) {
+            if (DEMO_IDS.includes(id)) return true;
+            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
+            const numericId = Number(id);
+            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
+        }
+
+        function displayNameFor(id) {
+            return state.registry[id] || id;
+        }
+
+        function isAllowedDevice(id) {
+            return Boolean(state.registry[id]) || DEMO_IDS.includes(id);
+        }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function mapRange(value, inMin, inMax, outMin, outMax) {
+            const ratio = (value - inMin) / (inMax - inMin || 1);
+            return outMin + ratio * (outMax - outMin);
+        }
+
+        function composerBounds() {
+            return {
+                minX: COMPOSER_WORLD.width * 0.15,
+                maxX: COMPOSER_WORLD.width * 0.85,
+                minY: COMPOSER_WORLD.height * 0.15,
+                maxY: COMPOSER_WORLD.height * 0.85
+            };
+        }
+
+        function worldToScreen(x, y) {
+            const width = nodeCanvas.clientWidth;
+            const height = nodeCanvas.clientHeight;
+            return {
+                x: (x - state.viewportCenterX) * state.zoom + width / 2,
+                y: (y - state.viewportCenterY) * state.zoom + height / 2
+            };
+        }
+
+        function screenSpanToWorld() {
+            return {
+                width: nodeCanvas.clientWidth / state.zoom,
+                height: nodeCanvas.clientHeight / state.zoom
+            };
+        }
+
+        function updateViewportCenter() {
+            const nodes = [...state.nodes.values()];
+            if (!nodes.length) return;
+
+            const averageX = nodes.reduce((sum, node) => sum + node.worldX, 0) / nodes.length;
+            const averageY = nodes.reduce((sum, node) => sum + node.worldY, 0) / nodes.length;
+            const span = screenSpanToWorld();
+
+            state.viewportCenterX = clamp(
+                averageX,
+                span.width / 2,
+                COMPOSER_WORLD.width - span.width / 2
+            );
+            state.viewportCenterY = clamp(
+                averageY,
+                span.height / 2,
+                COMPOSER_WORLD.height - span.height / 2
+            );
+        }
+
+        function createNode(id, index) {
+            const bounds = composerBounds();
+            const startX = mapRange(index, 0, Math.max(MAX_VISIBLE_NODES - 1, 1), bounds.minX, bounds.maxX);
+            const startY = mapRange(index % 4, 0, 3, bounds.minY, bounds.maxY);
+            return {
+                id,
+                index,
+                accelX: 0,
+                accelY: 0,
+                light: 50,
+                penDown: false,
+                colorIndex: index % RAINBOW.length,
+                color: RAINBOW[index % RAINBOW.length],
+                worldX: startX,
+                worldY: startY,
+                targetWorldX: startX,
+                targetWorldY: startY,
+                prevWorldX: startX,
+                prevWorldY: startY
+            };
+        }
+
+        function normalizeTarget(node) {
+            const bounds = composerBounds();
+            node.targetWorldX = clamp(
+                mapRange(node.accelX, -1024, 1024, bounds.minX, bounds.maxX),
+                bounds.minX,
+                bounds.maxX
+            );
+            node.targetWorldY = clamp(
+                mapRange(node.accelY, -1024, 1024, bounds.maxY, bounds.minY),
+                bounds.minY,
+                bounds.maxY
+            );
+        }
+
+        function layoutNodes() {
+            const bounds = composerBounds();
+            const count = Math.max(state.nodes.size, 1);
+            const columns = Math.min(2, count);
+            const rows = Math.ceil(count / columns);
+            const colGap = (bounds.maxX - bounds.minX) / (columns + 1);
+            const rowGap = (bounds.maxY - bounds.minY) / (rows + 1);
+
+            for (const node of state.nodes.values()) {
+                const col = node.index % columns;
+                const row = Math.floor(node.index / columns);
+                node.worldX = bounds.minX + colGap * (col + 1);
+                node.worldY = bounds.minY + rowGap * (row + 1);
+                node.targetWorldX = node.worldX;
+                node.targetWorldY = node.worldY;
+                node.prevWorldX = node.worldX;
+                node.prevWorldY = node.worldY;
+                normalizeTarget(node);
+            }
+
+            updateViewportCenter();
+        }
+
+        function ensureNode(id) {
+            if (!isAllowedDevice(id)) return null;
+            if (state.nodes.has(id)) return state.nodes.get(id);
+            if (state.nodes.size >= MAX_VISIBLE_NODES) return null;
+
+            const node = createNode(id, state.nodes.size);
+            state.nodes.set(id, node);
+            layoutNodes();
+            return node;
+        }
+
+        function pruneNodes() {
+            for (const id of [...state.nodes.keys()]) {
+                if (!isAllowedDevice(id)) state.nodes.delete(id);
+            }
+            let index = 0;
+            for (const node of state.nodes.values()) {
+                node.index = index;
+                node.color = RAINBOW[node.colorIndex % RAINBOW.length];
+                index += 1;
+            }
+            layoutNodes();
+        }
+
+        function resizeCanvases() {
+            const ratio = window.devicePixelRatio || 1;
+            for (const canvas of [worldCanvas, nodeCanvas]) {
+                const bounds = canvas.getBoundingClientRect();
+                canvas.width = Math.round(bounds.width * ratio);
+                canvas.height = Math.round(bounds.height * ratio);
+            }
+            worldCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            nodeCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+
+        function clearDrawing() {
+            worldCtx.clearRect(0, 0, worldCanvas.clientWidth, worldCanvas.clientHeight);
+            for (const node of state.nodes.values()) {
+                node.prevWorldX = node.worldX;
+                node.prevWorldY = node.worldY;
+            }
+        }
+
+        function strokeColorWithOpacity(hex, opacity) {
+            const value = hex.replace("#", "");
+            const r = parseInt(value.slice(0, 2), 16);
+            const g = parseInt(value.slice(2, 4), 16);
+            const b = parseInt(value.slice(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        function drawViewportGuides() {
+            const width = nodeCanvas.clientWidth;
+            const height = nodeCanvas.clientHeight;
+            const bounds = composerBounds();
+
+            nodeCtx.strokeStyle = "rgba(17, 24, 39, 0.08)";
+            nodeCtx.lineWidth = 1;
+            nodeCtx.strokeRect(0.5, 0.5, width - 1, height - 1);
+
+            const topLeft = worldToScreen(bounds.minX, bounds.minY);
+            const bottomRight = worldToScreen(bounds.maxX, bounds.maxY);
+            nodeCtx.strokeStyle = "rgba(17, 24, 39, 0.16)";
+            nodeCtx.setLineDash([8, 8]);
+            nodeCtx.strokeRect(
+                topLeft.x,
+                topLeft.y,
+                bottomRight.x - topLeft.x,
+                bottomRight.y - topLeft.y
+            );
+            nodeCtx.setLineDash([]);
+        }
+
+        function drawFrame() {
+            const width = nodeCanvas.clientWidth;
+            const height = nodeCanvas.clientHeight;
+            nodeCtx.clearRect(0, 0, width, height);
+            drawViewportGuides();
+
+            for (const node of state.nodes.values()) {
+                node.worldX += (node.targetWorldX - node.worldX) * 0.2;
+                node.worldY += (node.targetWorldY - node.worldY) * 0.2;
+
+                const radius = mapRange(node.light, 0, 255, 8, 36);
+
+                if (node.penDown) {
+                    const previous = worldToScreen(node.prevWorldX, node.prevWorldY);
+                    const current = worldToScreen(node.worldX, node.worldY);
+
+                    worldCtx.strokeStyle = strokeColorWithOpacity(node.color, state.lineOpacity);
+                    worldCtx.fillStyle = strokeColorWithOpacity(node.color, state.lineOpacity);
+                    worldCtx.lineWidth = Math.max(2, radius * 0.4 * state.zoom);
+                    worldCtx.lineCap = "round";
+                    worldCtx.lineJoin = "round";
+
+                    worldCtx.beginPath();
+                    worldCtx.arc(current.x, current.y, Math.max(1.5, radius * 0.22 * state.zoom), 0, Math.PI * 2);
+                    worldCtx.fill();
+
+                    worldCtx.beginPath();
+                    worldCtx.moveTo(previous.x, previous.y);
+                    worldCtx.lineTo(current.x, current.y);
+                    worldCtx.stroke();
+                }
+
+                node.prevWorldX = node.worldX;
+                node.prevWorldY = node.worldY;
+
+                const screen = worldToScreen(node.worldX, node.worldY);
+                const scaledRadius = Math.max(6, radius * state.zoom);
+
+                nodeCtx.fillStyle = node.color;
+                nodeCtx.beginPath();
+                nodeCtx.arc(screen.x, screen.y, scaledRadius, 0, Math.PI * 2);
+                nodeCtx.fill();
+
+                nodeCtx.strokeStyle = node.penDown ? "#111827" : "rgba(17, 24, 39, 0.45)";
+                nodeCtx.lineWidth = node.penDown ? 3 : 1;
+                nodeCtx.beginPath();
+                nodeCtx.arc(screen.x, screen.y, scaledRadius, 0, Math.PI * 2);
+                nodeCtx.stroke();
+
+                nodeCtx.fillStyle = "#111827";
+                nodeCtx.font = "12px SFMono-Regular, Menlo, monospace";
+                nodeCtx.textAlign = "center";
+                nodeCtx.fillText(displayNameFor(node.id), screen.x, screen.y - scaledRadius - 10);
+            }
+
+            updateViewportCenter();
+            requestAnimationFrame(drawFrame);
+        }
+
+        function applyNodeUpdate(id, patch) {
+            const node = ensureNode(id);
+            if (!node) return;
+
+            if (Number.isFinite(patch.ax)) node.accelX = clamp(Math.round(patch.ax), -2048, 2048);
+            if (Number.isFinite(patch.ay)) node.accelY = clamp(Math.round(patch.ay), -2048, 2048);
+            if (Number.isFinite(patch.light)) node.light = clamp(Math.round(patch.light), 0, 255);
+            if (typeof patch.penDown === "boolean") node.penDown = patch.penDown;
+            if (patch.penToggle) node.penDown = !node.penDown;
+            if (patch.colorShift) {
+                node.colorIndex = (node.colorIndex + 1) % RAINBOW.length;
+                node.color = RAINBOW[node.colorIndex];
+            }
+
+            normalizeTarget(node);
+        }
+
+        function decodeStrictHubField(key, numericValue) {
+            if (!Number.isFinite(numericValue)) return null;
+            if (key === "x" && numericValue >= -4096 && numericValue <= 4096) return { ax: numericValue };
+            if (key === "y" && numericValue >= -4096 && numericValue <= 4096) return { ay: numericValue };
+            if (key === "l" && numericValue >= 0 && numericValue <= 255) return { light: numericValue };
+            if (key === "a") {
+                if (numericValue === 1) return { penToggle: true };
+                if (numericValue === 2) return { colorShift: true };
+                if (numericValue === 0) return { penDown: false };
+            }
+            return null;
+        }
+
+        function parseHubLine(rawLine) {
+            const line = (rawLine || "").trim();
+            if (!line) return null;
+
+            const match = /^([A-Za-z0-9-]+)\|([a-z])=(-?\d+)$/.exec(line);
+            if (!match) return null;
+
+            const id = match[1];
+            const key = match[2];
+            const numericValue = Number(match[3]);
+
+            if (!isValidMicrobitSerial(id) || !isAllowedDevice(id)) return null;
+
+            const patch = decodeStrictHubField(key, numericValue);
+            if (!patch) return null;
+
+            return { id, patch };
+        }
+
+        function handleHubLine(rawLine) {
+            const message = parseHubLine(rawLine);
+            if (!message) return;
+            applyNodeUpdate(message.id, message.patch);
+        }
+
+        class LineBreakTransformer {
+            constructor() {
+                this.buffer = "";
+            }
+            transform(chunk, controller) {
+                this.buffer += chunk;
+                const lines = this.buffer.split(/\r?\n/);
+                this.buffer = lines.pop();
+                lines.forEach(line => controller.enqueue(line));
+            }
+            flush(controller) {
+                if (this.buffer) controller.enqueue(this.buffer);
+            }
+        }
+
+        async function readHubLoop() {
+            try {
+                while (state.serial.keepReading && state.serial.reader) {
+                    const { value, done } = await state.serial.reader.read();
+                    if (done) break;
+                    if (typeof value === "string") handleHubLine(value);
+                }
+            } catch (error) {
+                await disconnectHub();
+            } finally {
+                if (state.serial.keepReading) await disconnectHub();
+            }
+        }
+
+        async function connectHub() {
+            if (!("serial" in navigator)) return;
+            try {
+                state.serial.port = await navigator.serial.requestPort();
+                await state.serial.port.open({ baudRate: 115200 });
+                const decoder = new TextDecoderStream();
+                state.serial.inputDone = state.serial.port.readable.pipeTo(decoder.writable);
+                state.serial.reader = decoder.readable
+                    .pipeThrough(new TransformStream(new LineBreakTransformer()))
+                    .getReader();
+                state.serial.keepReading = true;
+                document.getElementById("connectBtn").textContent = "Disconnect Hub";
+                readHubLoop();
+            } catch (error) {
+                await disconnectHub();
+            }
+        }
+
+        async function disconnectHub() {
+            state.serial.keepReading = false;
+            if (state.serial.reader) {
+                try { await state.serial.reader.cancel(); } catch (error) {}
+                try { state.serial.reader.releaseLock(); } catch (error) {}
+                state.serial.reader = null;
+            }
+            if (state.serial.inputDone) {
+                try { await state.serial.inputDone; } catch (error) {}
+                state.serial.inputDone = null;
+            }
+            if (state.serial.port) {
+                try { await state.serial.port.close(); } catch (error) {}
+                state.serial.port = null;
+            }
+            document.getElementById("connectBtn").textContent = "Connect Hub";
+        }
+
+        function createDemoPacket(id) {
+            return [
+                `${id}|x=${Math.round(mapRange(Math.random(), 0, 1, -900, 900))}`,
+                `${id}|y=${Math.round(mapRange(Math.random(), 0, 1, -900, 900))}`,
+                `${id}|l=${Math.round(Math.random() * 255)}`,
+                `${id}|a=${Math.random() > 0.75 ? 1 : Math.random() > 0.85 ? 2 : 0}`
+            ];
+        }
+
+        function toggleSimulation() {
+            if (state.simulationRunning) {
+                clearInterval(state.simulationTimer);
+                state.simulationRunning = false;
+                state.simulationTimer = null;
+                document.getElementById("simulateBtn").textContent = "Start Demo";
+                return;
+            }
+
+            for (const id of DEMO_IDS) {
+                if (!state.registry[id]) state.registry[id] = id;
+            }
+            saveRegistry();
+            pruneNodes();
+
+            state.simulationRunning = true;
+            document.getElementById("simulateBtn").textContent = "Stop Demo";
+            state.simulationTimer = setInterval(() => {
+                for (const id of DEMO_IDS) {
+                    for (const line of createDemoPacket(id)) {
+                        handleHubLine(line);
+                    }
+                }
+            }, 180);
+        }
+
+        function setZoom(nextZoom) {
+            state.zoom = clamp(nextZoom, 0.05, 1.5);
+            document.getElementById("zoomValue").textContent = `${Math.round(state.zoom * 100)}%`;
+        }
+
+        function setOpacity(nextOpacity) {
+            state.lineOpacity = clamp(nextOpacity, 0.05, 1);
+            document.getElementById("opacityValue").textContent = `${Math.round(state.lineOpacity * 100)}%`;
+        }
+
+        document.getElementById("connectBtn").addEventListener("click", async () => {
+            if (state.serial.port) {
+                await disconnectHub();
+            } else {
+                await connectHub();
+            }
+        });
+        document.getElementById("clearBtn").addEventListener("click", clearDrawing);
+        document.getElementById("simulateBtn").addEventListener("click", toggleSimulation);
+        document.getElementById("zoomOutBtn").addEventListener("click", () => setZoom(state.zoom * 0.8));
+        document.getElementById("zoomInBtn").addEventListener("click", () => setZoom(state.zoom * 1.25));
+        document.getElementById("opacityRange").addEventListener("input", event => {
+            setOpacity(Number(event.target.value));
+        });
+
+        if ("serial" in navigator) {
+            navigator.serial.addEventListener("disconnect", async event => {
+                if (state.serial.port && event.target === state.serial.port) {
+                    await disconnectHub();
+                }
+            });
+        }
+
+        async function initializeRegistry() {
+            const fileRegistry = await loadRegistryFromFile();
+            state.registry = { ...fileRegistry, ...state.registry };
+            saveRegistry();
+            pruneNodes();
+        }
+
+        state.registry = loadRegistry();
+        pruneNodes();
+        resizeCanvases();
+        setZoom(state.zoom);
+        setOpacity(state.lineOpacity);
+        drawFrame();
+        initializeRegistry();
+        window.addEventListener("resize", resizeCanvases);
+    </script>
+</body>
+</html>

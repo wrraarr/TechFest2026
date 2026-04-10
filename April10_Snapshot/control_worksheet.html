@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechFest Control Worksheet</title>
+    <style>
+        :root {
+            --ink: #221715;
+            --paper: #fbf5ea;
+            --panel: rgba(255, 252, 246, 0.9);
+            --line: rgba(34, 23, 21, 0.12);
+            --accent: #b15a33;
+            --teal: #2f6d66;
+            --gold: #c89a35;
+            --blue: #4c6fb2;
+            --shadow: rgba(48, 30, 22, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: "Avenir Next", "Helvetica Neue", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(200, 154, 53, 0.14), transparent 24%),
+                radial-gradient(circle at 82% 10%, rgba(76, 111, 178, 0.14), transparent 24%),
+                linear-gradient(145deg, #fdf8ef 0%, var(--paper) 52%, #f2e6d3 100%);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .page {
+            width: min(1180px, calc(100vw - 32px));
+            margin: 0 auto;
+            padding: 24px 0 40px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .brand {
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav a {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.7);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .hero,
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background: var(--panel);
+            box-shadow: 0 20px 56px var(--shadow);
+        }
+
+        .hero {
+            padding: 28px;
+            margin-bottom: 18px;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            font-size: clamp(2.4rem, 5vw, 4.4rem);
+            letter-spacing: -0.05em;
+            line-height: 0.96;
+            max-width: 10ch;
+        }
+
+        .hero-copy {
+            margin-top: 16px;
+            max-width: 46rem;
+            color: rgba(34, 23, 21, 0.74);
+            line-height: 1.6;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .chip {
+            padding: 9px 13px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.7);
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .layout {
+            display: grid;
+            gap: 18px;
+        }
+
+        .panel {
+            padding: 24px;
+        }
+
+        .panel h2 {
+            font-size: 1.55rem;
+            letter-spacing: -0.03em;
+        }
+
+        .panel-copy {
+            margin-top: 10px;
+            color: rgba(34, 23, 21, 0.72);
+            line-height: 1.6;
+        }
+
+        .table-wrap {
+            margin-top: 16px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+        }
+
+        th,
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(34, 23, 21, 0.1);
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.96rem;
+            line-height: 1.45;
+        }
+
+        th {
+            font-size: 0.84rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(34, 23, 21, 0.64);
+        }
+
+        .tool-grid,
+        .idea-grid,
+        .planner-grid {
+            display: grid;
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .tool-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .idea-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .planner-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .card,
+        .planner-card {
+            padding: 18px;
+            border-radius: 22px;
+            border: 1px solid rgba(34, 23, 21, 0.08);
+            background: linear-gradient(150deg, rgba(255, 255, 255, 0.88), rgba(252, 245, 235, 0.96));
+        }
+
+        .card h3,
+        .planner-card h3 {
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(34, 23, 21, 0.08);
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .card p,
+        .planner-card p {
+            margin-top: 10px;
+            color: rgba(34, 23, 21, 0.72);
+            line-height: 1.55;
+        }
+
+        .line,
+        .big-line,
+        .idea-line {
+            margin-top: 10px;
+            border-bottom: 2px solid rgba(34, 23, 21, 0.14);
+        }
+
+        .line {
+            height: 26px;
+        }
+
+        .big-line {
+            height: 62px;
+        }
+
+        .idea-line {
+            height: 42px;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .legend span {
+            padding: 8px 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(34, 23, 21, 0.08);
+            background: rgba(255, 255, 255, 0.74);
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .print-note {
+            margin-top: 14px;
+            color: rgba(34, 23, 21, 0.62);
+            font-size: 0.92rem;
+        }
+
+        @media (max-width: 980px) {
+            .tool-grid,
+            .idea-grid,
+            .planner-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .page {
+                width: auto;
+                padding: 0;
+            }
+
+            .topbar {
+                display: none;
+            }
+
+            .hero,
+            .panel,
+            .card,
+            .planner-card {
+                box-shadow: none;
+                background: white;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <div class="brand">TechFest Worksheet</div>
+            <nav class="nav" aria-label="Primary">
+                <a href="index.html">Home</a>
+                <a href="string_ensemble_baton_nodes.html">Orchestra</a>
+                <a href="microbit_luddy_characters.html">Characters</a>
+                <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+                <a href="control_worksheet.html">Worksheet</a>
+            </nav>
+        </header>
+
+        <section class="hero">
+            <p class="eyebrow">Classroom Planning Page</p>
+            <h1>Design your own controls and effects.</h1>
+            <p class="hero-copy">Use this worksheet to decide what each micro:bit event should do on the Sketch Pad, Characters, and Orchestra pages. This version only focuses on discrete controls like buttons and gestures. It does not use continuous sensor fields like `x`, `y`, `light`, `sound`, or `compass`.</p>
+            <div class="chip-row">
+                <div class="chip">Buttons and gestures only</div>
+                <div class="chip">Current live map included</div>
+                <div class="chip">Blank planning spaces</div>
+                <div class="chip">New effect ideas</div>
+            </div>
+            <p class="print-note">Print it, mark it up, or fill it in on screen with your group.</p>
+        </section>
+
+        <section class="layout">
+            <section class="panel">
+                <p class="eyebrow">Current Event Codes</p>
+                <h2>What the satellite can send right now</h2>
+                <p class="panel-copy">These are the current discrete event codes from the student micro:bit controller. Some pages already use them, and some codes are still open for new ideas.</p>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Event</th>
+                                <th>Type</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>a=1</code></td><td>Button A</td><td>Action</td><td>Already used on all three main tools.</td></tr>
+                            <tr><td><code>a=2</code></td><td>Button B</td><td>Action</td><td>Already used on all three main tools.</td></tr>
+                            <tr><td><code>a=3</code></td><td>Button A+B</td><td>Action</td><td>Already used on all three main tools.</td></tr>
+                            <tr><td><code>a=4</code></td><td>Logo press</td><td>Action</td><td>Available for new page behavior.</td></tr>
+                            <tr><td><code>g=1</code></td><td>Logo up</td><td>Gesture</td><td>Used in all three tools.</td></tr>
+                            <tr><td><code>g=2</code></td><td>Logo down</td><td>Gesture</td><td>Used in all three tools.</td></tr>
+                            <tr><td><code>g=3</code></td><td>Tilt left</td><td>Gesture</td><td>Used in all three tools.</td></tr>
+                            <tr><td><code>g=4</code></td><td>Tilt right</td><td>Gesture</td><td>Used in all three tools.</td></tr>
+                            <tr><td><code>g=5</code></td><td>Screen up</td><td>Gesture</td><td>Open in Orchestra, used elsewhere.</td></tr>
+                            <tr><td><code>g=6</code></td><td>Screen down</td><td>Gesture</td><td>Open in Characters, partly open in Orchestra.</td></tr>
+                            <tr><td><code>g=7</code></td><td>Free fall</td><td>Gesture</td><td>Open in Characters and Orchestra.</td></tr>
+                            <tr><td><code>g=8</code></td><td>Shake</td><td>Gesture</td><td>Used in all three tools.</td></tr>
+                            <tr><td><code>g=9</code></td><td>3G</td><td>Gesture</td><td>Open on all three tools.</td></tr>
+                            <tr><td><code>g=10</code></td><td>6G</td><td>Gesture</td><td>Open on all three tools for meaningful action.</td></tr>
+                            <tr><td><code>g=11</code></td><td>8G</td><td>Gesture</td><td>Open on all three tools.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel">
+                <p class="eyebrow">Current Live Map</p>
+                <h2>What each page does right now</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Sketch Pad</th>
+                                <th>Characters</th>
+                                <th>Orchestra</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>a=1</code></td><td>Toggle pen</td><td>Show A badge</td><td>Player volume down or baton volume down</td></tr>
+                            <tr><td><code>a=2</code></td><td>Shift color</td><td>Show B badge</td><td>Player volume up or baton volume up</td></tr>
+                            <tr><td><code>a=3</code></td><td>Shrink pen</td><td>Shoot a ball</td><td>Player note or baton full chord</td></tr>
+                            <tr><td><code>a=4</code></td><td>Open</td><td>Open</td><td>Open</td></tr>
+                            <tr><td><code>g=1</code></td><td>Move down</td><td>Move down</td><td>Player chord down or baton key down</td></tr>
+                            <tr><td><code>g=2</code></td><td>Move up</td><td>Move up</td><td>Player chord up or baton key up</td></tr>
+                            <tr><td><code>g=3</code></td><td>Move left</td><td>Move left</td><td>Player scale down or baton chord down</td></tr>
+                            <tr><td><code>g=4</code></td><td>Move right</td><td>Move right</td><td>Player scale up or baton chord up</td></tr>
+                            <tr><td><code>g=5</code></td><td>Stop</td><td>Stop</td><td>Open</td></tr>
+                            <tr><td><code>g=6</code></td><td>Reset pen size</td><td>Open</td><td>Player key up only</td></tr>
+                            <tr><td><code>g=7</code></td><td>Shift color</td><td>Open</td><td>Open</td></tr>
+                            <tr><td><code>g=8</code></td><td>Grow pen</td><td>Shake burst</td><td>Player nearby set or baton mode shift</td></tr>
+                            <tr><td><code>g=9</code></td><td>Open</td><td>Open</td><td>Open</td></tr>
+                            <tr><td><code>g=10</code></td><td>Open</td><td>Open</td><td>Open</td></tr>
+                            <tr><td><code>g=11</code></td><td>Open</td><td>Open</td><td>Open</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="legend">
+                    <span>Open = not doing a meaningful job yet</span>
+                    <span>Continuous sensors are intentionally left out</span>
+                    <span>Some orchestra codes do different jobs for players and baton</span>
+                </div>
+            </section>
+
+            <section class="panel">
+                <p class="eyebrow">Idea Menu</p>
+                <h2>Six new behavior ideas for each tool</h2>
+                <p class="panel-copy">These are discrete-only effect ideas. “Available now” means the code slot is already open in today’s pages. “Future slot” means you would need to add another code to the micro:bit sender later.</p>
+                <div class="idea-grid">
+                    <div class="card">
+                        <h3>Sketch Pad</h3>
+                        <div class="tag">a=4 Available now</div>
+                        <p><strong>Stamp burst.</strong> Drop a star, square, or spiral stamp at the current pen spot.</p>
+                        <div class="tag">g=9 Available now</div>
+                        <p><strong>Mirror mode.</strong> Draw a reflected copy across the center line.</p>
+                        <div class="tag">g=10 Available now</div>
+                        <p><strong>Undo last stroke.</strong> Remove the newest trail segment or last saved path.</p>
+                        <div class="tag">g=11 Available now</div>
+                        <p><strong>Dotted trail.</strong> Switch from a line to spaced dots.</p>
+                        <div class="tag">a=5 Future slot</div>
+                        <p><strong>Spray paint.</strong> Make a cloud of tiny dots around the pen.</p>
+                        <div class="tag">a=6 Future slot</div>
+                        <p><strong>Symmetry spokes.</strong> Draw the same move 4 or 6 times like a kaleidoscope.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Characters</h3>
+                        <div class="tag">a=4 Available now</div>
+                        <p><strong>Jump pose.</strong> Pop the character up and squash on landing.</p>
+                        <div class="tag">g=6 Available now</div>
+                        <p><strong>Dance spin.</strong> Rotate in place for a beat, then recover.</p>
+                        <div class="tag">g=7 Available now</div>
+                        <p><strong>Freeze statue.</strong> Stop and hold a silly pose.</p>
+                        <div class="tag">g=9 Available now</div>
+                        <p><strong>Costume swap.</strong> Change colors or body proportions.</p>
+                        <div class="tag">g=10 Available now</div>
+                        <p><strong>Speech bubble.</strong> Show a symbol, word, or emoji-like icon above the head.</p>
+                        <div class="tag">g=11 Available now</div>
+                        <p><strong>Parade line-up.</strong> Call nearby characters into a short formation.</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>Orchestra</h3>
+                        <div class="tag">a=4 Available now</div>
+                        <p><strong>Accent toggle.</strong> Turn short punchy notes on and off.</p>
+                        <div class="tag">g=5 Available now</div>
+                        <p><strong>Mute or unmute.</strong> Silence a player or a whole baton-triggered chord.</p>
+                        <div class="tag">g=7 Available now</div>
+                        <p><strong>Arpeggio sweep.</strong> Play the chord as a quick staircase instead of together.</p>
+                        <div class="tag">g=9 Available now</div>
+                        <p><strong>Echo repeat.</strong> Replay a note or chord with a fading tail.</p>
+                        <div class="tag">g=10 Available now</div>
+                        <p><strong>Solo spotlight.</strong> Let one node take the front role for a moment.</p>
+                        <div class="tag">g=11 Available now</div>
+                        <p><strong>Tremolo shimmer.</strong> Add a rapid repeated-note texture.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <p class="eyebrow">Student Planner</p>
+                <h2>Part 1: Decide what each code should do</h2>
+                <p class="panel-copy">Choose a tool. Keep a current mapping, replace it, or fill an open slot with a new idea.</p>
+                <div class="planner-grid">
+                    <div class="planner-card">
+                        <h3>Team Info</h3>
+                        <p>Names:</p>
+                        <div class="line"></div>
+                        <p>Tool to redesign:</p>
+                        <div class="line"></div>
+                        <p>Main goal:</p>
+                        <div class="big-line"></div>
+                    </div>
+                    <div class="planner-card">
+                        <h3>Rules for This Round</h3>
+                        <p>We will only use:</p>
+                        <div class="line"></div>
+                        <p>We will not use continuous sensors like `x`, `y`, `light`, `sound`, or `compass`.</p>
+                        <p>Our page should feel:</p>
+                        <div class="line"></div>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Current job</th>
+                                <th>Keep, replace, or open?</th>
+                                <th>Our new idea</th>
+                                <th>Why this helps</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>a=1</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>a=2</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>a=3</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>a=4</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>g=5</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>g=6</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>g=7</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>g=8</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>g=9</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>g=10</code></td><td></td><td></td><td></td><td></td></tr>
+                            <tr><td><code>g=11</code></td><td></td><td></td><td></td><td></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="panel">
+                <p class="eyebrow">Effect Builder</p>
+                <h2>Part 2: Plan a new behavior before coding it</h2>
+                <div class="planner-grid">
+                    <div class="planner-card">
+                        <h3>New Effect 1</h3>
+                        <p>Name of effect:</p>
+                        <div class="line"></div>
+                        <p>Tool:</p>
+                        <div class="line"></div>
+                        <p>Trigger code:</p>
+                        <div class="line"></div>
+                        <p>What should happen?</p>
+                        <div class="big-line"></div>
+                        <p>Will it happen once or stay on?</p>
+                        <div class="idea-line"></div>
+                    </div>
+
+                    <div class="planner-card">
+                        <h3>New Effect 2</h3>
+                        <p>Name of effect:</p>
+                        <div class="line"></div>
+                        <p>Tool:</p>
+                        <div class="line"></div>
+                        <p>Trigger code:</p>
+                        <div class="line"></div>
+                        <p>What should happen?</p>
+                        <div class="big-line"></div>
+                        <p>Will it happen once or stay on?</p>
+                        <div class="idea-line"></div>
+                    </div>
+
+                    <div class="planner-card">
+                        <h3>New Effect 3</h3>
+                        <p>Name of effect:</p>
+                        <div class="line"></div>
+                        <p>Tool:</p>
+                        <div class="line"></div>
+                        <p>Trigger code:</p>
+                        <div class="line"></div>
+                        <p>What should happen?</p>
+                        <div class="big-line"></div>
+                        <p>Will it happen once or stay on?</p>
+                        <div class="idea-line"></div>
+                    </div>
+
+                    <div class="planner-card">
+                        <h3>New Effect 4</h3>
+                        <p>Name of effect:</p>
+                        <div class="line"></div>
+                        <p>Tool:</p>
+                        <div class="line"></div>
+                        <p>Trigger code:</p>
+                        <div class="line"></div>
+                        <p>What should happen?</p>
+                        <div class="big-line"></div>
+                        <p>Will it happen once or stay on?</p>
+                        <div class="idea-line"></div>
+                    </div>
+                </div>
+            </section>
+        </section>
+    </main>
+</body>
+</html>

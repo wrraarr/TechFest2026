@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luddy Orchestra: Master Score</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body { margin: 0; background-color: #0f172a; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; user-select: none; }
+        
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.95); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #startBtn { padding: 15px 30px; font-size: 1.5rem; font-weight: bold; background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s;}
+        #startBtn:active { transform: scale(0.95); }
+        
+        #ui { position: absolute; top: 20px; left: 20px; pointer-events: none; z-index: 10; }
+        h1 { margin: 0; color: #38bdf8; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 1px;}
+        .hud { margin-top: 15px; font-family: monospace; font-size: 1.2rem; color: #fbbf24; background: rgba(15, 23, 42, 0.8); padding: 10px; border-radius: 5px; border: 1px solid #334155; display: inline-block;}
+        
+        /* D3 Score Elements */
+        svg { width: 100vw; height: 100vh; display: block; }
+        
+        .staff-line { stroke: #334155; stroke-width: 2px; }
+        .staff-line.middle-c { stroke: #64748b; stroke-dasharray: 6 4; stroke-width: 2px; }
+        .clef-label { fill: #94a3b8; font-family: Georgia, serif; font-size: 24px; font-style: italic; opacity: 0.7; }
+        
+        /* Nodes */
+        .node { cursor: pointer; }
+        .node circle { stroke: #1e293b; stroke-width: 3px; transition: filter 0.1s; }
+        .node.dragging circle { filter: brightness(1.5); stroke: #fff; }
+        .node text.label { font-family: sans-serif; font-weight: bold; fill: white; pointer-events: none; text-anchor: middle; transform: translateY(-4px); font-size: 14px;}
+        .node text.note { font-family: monospace; font-weight: bold; fill: #cbd5e1; pointer-events: none; text-anchor: middle; transform: translateY(12px); font-size: 11px;}
+        
+        .baton { fill: #fbbf24; }
+        .state-ctrl { fill: #f43f5e; }
+        .violin { fill: #38bdf8; }
+        .viola { fill: #a855f7; }
+        .cello { fill: #10b981; }
+        .bass { fill: #f97316; }
+        
+        /* Range guides */
+        .range-line { stroke: rgba(255, 255, 255, 0.1); stroke-width: 40px; stroke-linecap: round; }
+    </style>
+</head>
+<body>
+
+<div id="overlay">
+    <h1 style="margin-bottom: 20px; font-size: 2rem;">Luddy Digital Score</h1>
+    <button id="startBtn">INITIALIZE ORCHESTRA</button>
+</div>
+
+<div id="ui">
+    <h1>Master Score</h1>
+    <div class="hud" id="hud-state">KEY: C Major | CHORD: I</div>
+</div>
+
+<svg id="viz"></svg>
+
+<script>
+    // --- 1. MUSICAL MATH & LOGIC ---
+    let currentKey = 'C';
+    let currentChord = 'I';
+    
+    const keyRoots = { 'C': 0, 'G': 7, 'D': 2, 'A': 9 };
+    const chordIntervals = {
+        'I': [0, 4, 7],         // Major Triad
+        'IV': [5, 9, 12],       // Subdominant
+        'V': [7, 11, 14],       // Dominant
+        'V7': [7, 11, 14, 17]   // Dominant 7th
+    };
+
+    // Snaps a raw MIDI value to the closest valid chord note
+    function getClosestChordNote(rawMidi, minMidi, maxMidi) {
+        let validNotes = [];
+        let rootOffset = keyRoots[currentKey];
+        let intervals = chordIntervals[currentChord];
+        
+        for (let oct = 0; oct <= 8; oct++) {
+            let baseMidi = (oct + 1) * 12 + rootOffset;
+            intervals.forEach(interval => {
+                let note = baseMidi + interval;
+                if (note >= minMidi && note <= maxMidi) validNotes.push(note);
+            });
+        }
+        
+        if(validNotes.length === 0) return minMidi; // Fallback
+
+        return validNotes.reduce((prev, curr) => 
+            Math.abs(curr - rawMidi) < Math.abs(prev - rawMidi) ? curr : prev
+        );
+    }
+
+    // --- 2. AUDIO ENGINE ---
+    const synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.1, decay: 0.2, sustain: 0.6, release: 2 }
+    }).toDestination();
+    synth.connect(new Tone.Reverb(3).toDestination());
+
+    // --- 3. D3 LAYOUT SCALES ---
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    
+    // MIDI Range: C1 (24) to C8 (108)
+    const SCORE_TOP = 80;
+    const SCORE_BOTTOM = height - 80;
+    
+    const yScale = d3.scaleLinear().domain([20, 108]).range([SCORE_BOTTOM, SCORE_TOP]);
+    const yToMidi = d3.scaleLinear().domain([SCORE_BOTTOM, SCORE_TOP]).range([20, 108]);
+
+    // Setup X Columns
+    const xControls = 80;
+    const xScoreStart = 250;
+    const colSpacing = (width - xScoreStart - 50) / 8; // 9 instruments = 8 gaps
+
+    const nodesData = [
+        // Controls (Fixed on the left)
+        { id: "BATON", type: "baton", label: "BATON", r: 35, isPlayer: false, x: xControls, y: SCORE_TOP + 50 },
+        { id: "KEY", type: "state-ctrl", label: "KEY", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 150 },
+        { id: "CHORD", type: "state-ctrl", label: "CHORD", r: 30, isPlayer: false, x: xControls, y: SCORE_TOP + 230 },
+        
+        // Players (Spread across columns)
+        { id: "B1", type: "bass", label: "B1", r: 35, isPlayer: true, col: 0, minMidi: 24, maxMidi: 72, startMidi: 36 },
+        { id: "C2", type: "cello", label: "C2", r: 30, isPlayer: true, col: 1, minMidi: 36, maxMidi: 84, startMidi: 43 },
+        { id: "C1", type: "cello", label: "C1", r: 30, isPlayer: true, col: 2, minMidi: 36, maxMidi: 84, startMidi: 48 },
+        { id: "VA2", type: "viola", label: "VA2", r: 28, isPlayer: true, col: 3, minMidi: 48, maxMidi: 96, startMidi: 55 },
+        { id: "VA1", type: "viola", label: "VA1", r: 28, isPlayer: true, col: 4, minMidi: 48, maxMidi: 96, startMidi: 60 },
+        { id: "V4", type: "violin", label: "V4", r: 25, isPlayer: true, col: 5, minMidi: 55, maxMidi: 103, startMidi: 67 },
+        { id: "V3", type: "violin", label: "V3", r: 25, isPlayer: true, col: 6, minMidi: 55, maxMidi: 103, startMidi: 72 },
+        { id: "V2", type: "violin", label: "V2", r: 25, isPlayer: true, col: 7, minMidi: 55, maxMidi: 103, startMidi: 76 },
+        { id: "V1", type: "violin", label: "V1", r: 25, isPlayer: true, col: 8, minMidi: 55, maxMidi: 103, startMidi: 79 }
+    ];
+
+    // Assign X coordinates based on columns
+    nodesData.forEach(d => {
+        if (d.isPlayer) {
+            d.x = xScoreStart + (d.col * colSpacing);
+            // We don't set d.y here yet, we'll calculate it via snap logic
+        }
+    });
+
+    const svg = d3.select("#viz").attr("viewBox", [0, 0, width, height]);
+
+    // --- 4. DRAW THE MUSICAL SCORE ---
+    const scoreGroup = svg.append("g").attr("id", "score-background");
+
+    // Definition of Staves (MIDI values of the 5 lines)
+    const staves = [
+        { name: "Treble", midiLines: [64, 67, 71, 74, 77] }, // E4 to F5
+        { name: "Alto", midiLines: [53, 57, 60, 64, 67] },   // F3 to G4
+        { name: "Bass", midiLines: [43, 47, 50, 53, 57] }    // G2 to A3
+    ];
+
+    staves.forEach(staff => {
+        // Draw the 5 horizontal lines
+        staff.midiLines.forEach(midi => {
+            scoreGroup.append("line")
+                .attr("class", "staff-line")
+                .attr("x1", xScoreStart - 50)
+                .attr("x2", width - 20)
+                .attr("y1", yScale(midi))
+                .attr("y2", yScale(midi));
+        });
+        
+        // Add Clef Label
+        scoreGroup.append("text")
+            .attr("class", "clef-label")
+            .attr("x", xScoreStart - 120)
+            .attr("y", yScale(staff.midiLines[2]) + 8) // Center line
+            .text(staff.name);
+    });
+
+    // Draw Middle C specifically
+    scoreGroup.append("line")
+        .attr("class", "staff-line middle-c")
+        .attr("x1", xScoreStart - 50)
+        .attr("x2", width - 20)
+        .attr("y1", yScale(60))
+        .attr("y2", yScale(60));
+    
+    scoreGroup.append("text")
+        .attr("class", "clef-label")
+        .attr("x", xScoreStart - 120)
+        .attr("y", yScale(60) + 8)
+        .style("fill", "#fbbf24")
+        .text("Middle C");
+
+    // Draw transparent Range Guides for each column
+    nodesData.filter(d => d.isPlayer).forEach(d => {
+        scoreGroup.append("line")
+            .attr("class", "range-line")
+            .attr("x1", d.x).attr("x2", d.x)
+            .attr("y1", yScale(d.minMidi)).attr("y2", yScale(d.maxMidi));
+    });
+
+    // --- 5. RENDER NODES ---
+    const nodeElements = svg.append("g")
+        .selectAll("g")
+        .data(nodesData).join("g")
+        .attr("class", "node")
+        .attr("id", d => `node-${d.id}`);
+
+    nodeElements.append("circle")
+        .attr("r", d => d.r).attr("class", d => d.type);
+
+    nodeElements.append("text").attr("class", "label").text(d => d.label);
+    nodeElements.append("text").attr("class", "note").text("");
+
+    // --- 6. POSITION & SNAP LOGIC ---
+    function updatePitchAndPosition(d, rawMidiOverride = null) {
+        if (!d.isPlayer) return;
+        
+        let targetMidi = rawMidiOverride !== null ? rawMidiOverride : d.startMidi;
+        
+        // Ensure within instrument range
+        targetMidi = Math.max(d.minMidi, Math.min(d.maxMidi, targetMidi));
+        
+        // Snap to chord
+        d.midi = getClosestChordNote(targetMidi, d.minMidi, d.maxMidi);
+        d.noteName = Tone.Frequency(d.midi, "midi").toNote();
+        
+        // LOCK the visual Y position to the snapped MIDI value
+        d.y = yScale(d.midi);
+        
+        // Update DOM
+        d3.select(`#node-${d.id}`).attr("transform", `translate(${d.x},${d.y})`);
+        d3.select(`#node-${d.id} text.note`).text(d.noteName);
+    }
+
+    function updateAllPitches() {
+        nodesData.forEach(d => {
+            if (d.isPlayer) {
+                // Re-snap using their current snapped MIDI as the base
+                updatePitchAndPosition(d, d.midi || d.startMidi);
+            } else {
+                // Static controls
+                d3.select(`#node-${d.id}`).attr("transform", `translate(${d.x},${d.y})`);
+            }
+        });
+    }
+
+    // --- 7. DRAG HANDLER ---
+    const dragHandler = d3.drag()
+        .on("start", function(event, d) {
+            d3.select(this).classed("dragging", true);
+            d.dragStartY = d.y; // To detect clicks
+        })
+        .on("drag", function(event, d) {
+            if (!d.isPlayer) return;
+            
+            // Map mouse Y to a raw MIDI value
+            let rawMidi = yToMidi(event.y);
+            
+            // Snap it, and visually move the node to the snapped slot
+            updatePitchAndPosition(d, rawMidi);
+        })
+        .on("end", function(event, d) {
+            d3.select(this).classed("dragging", false);
+            
+            // Trigger audio if it was a quick click instead of a drag
+            if (Math.abs(d.y - d.dragStartY) < 3) {
+                triggerAction(d);
+            } else if (d.isPlayer && Tone.context.state === 'running') {
+                // Optional: play note on drop
+                synth.triggerAttackRelease(d.noteName, "8n");
+            }
+        });
+
+    nodeElements.call(dragHandler);
+
+    // --- 8. ACTION LOGIC ---
+    function triggerAction(d) {
+        if (d.id === "BATON") {
+            let notes = nodesData.filter(n => n.isPlayer).map(n => n.noteName);
+            synth.triggerAttackRelease(notes, "4n");
+            
+            d3.select("body").style("background-color", "#1e293b");
+            setTimeout(() => d3.select("body").style("background-color", "#0f172a"), 100);
+        } 
+        else if (d.id === "KEY") {
+            const keys = ['C', 'G', 'D', 'A'];
+            currentKey = keys[(keys.indexOf(currentKey) + 1) % keys.length];
+            updateGlobalState();
+        } 
+        else if (d.id === "CHORD") {
+            const chords = ['I', 'IV', 'V', 'V7'];
+            currentChord = chords[(chords.indexOf(currentChord) + 1) % chords.length];
+            updateGlobalState();
+        } 
+        else if (d.isPlayer) {
+            synth.triggerAttackRelease(d.noteName, "8n");
+            let circle = d3.select(`#node-${d.id} circle`);
+            circle.style("filter", "brightness(2)");
+            setTimeout(() => circle.style("filter", "none"), 150);
+        }
+    }
+
+    function updateGlobalState() {
+        document.getElementById('hud-state').innerText = `KEY: ${currentKey} Major | CHORD: ${currentChord}`;
+        updateAllPitches();
+    }
+
+    // Initialize System
+    document.getElementById('startBtn').addEventListener('click', async () => {
+        await Tone.start();
+        document.getElementById('overlay').style.display = 'none';
+        updateAllPitches(); // Initial layout positioning
+    });
+
+</script>
+</body>
+</html>

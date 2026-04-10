@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luddy Orchestra Digital Twin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: #0f172a; /* Luddy tech dark */
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+        h1 { margin: 0; color: #38bdf8; font-size: 1.5rem; text-transform: uppercase; letter-spacing: 2px;}
+        p { margin: 5px 0 20px 0; color: #94a3b8; }
+        
+        button {
+            pointer-events: auto;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+            transition: 0.2s;
+        }
+        button:active { transform: scale(0.95); }
+
+        #console {
+            margin-top: 20px;
+            background: rgba(30, 41, 59, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            width: 300px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #4ade80;
+        }
+
+        /* D3 SVG Styles */
+        svg { width: 100vw; height: 100vh; display: block; }
+        .link { stroke: #334155; stroke-opacity: 0.6; stroke-width: 2px; }
+        .link.active { stroke: #38bdf8; stroke-width: 4px; stroke-opacity: 1; }
+        .node circle { stroke: #1e293b; stroke-width: 3px; cursor: grab; transition: fill 0.1s; }
+        .node circle:active { cursor: grabbing; }
+        .node text {
+            font-family: monospace;
+            font-weight: bold;
+            fill: white;
+            pointer-events: none;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+        
+        /* Node Colors */
+        .hub { fill: #ffffff; }
+        .conductor { fill: #f59e0b; }
+        .violin { fill: #38bdf8; }
+        .viola { fill: #a855f7; }
+        .cello { fill: #10b981; }
+        .bass { fill: #ef4444; }
+    </style>
+</head>
+<body>
+
+<div id="ui-layer">
+    <h1>Luddy Micro:bit Orchestra</h1>
+    <p>Network Visualization & Command Simulator</p>
+    <button id="startAudio">INIT AUDIO ENGINE</button>
+    <div id="console">
+        <div style="color: #94a3b8; margin-bottom: 5px;">LATEST RADIO PACKET:</div>
+        <div id="packetDisplay">Waiting for transmission...</div>
+    </div>
+</div>
+
+<svg id="viz"></svg>
+
+<script>
+    // --- 1. AUDIO ENGINE (Temporary Synth for instant testing) ---
+    // In production, swap this PolySynth for your 4 Philharmonia Samplers
+    const synth = new Tone.PolySynth(Tone.Synth, {
+        oscillator: { type: "sine" },
+        envelope: { attack: 0.1, decay: 0.2, sustain: 0.8, release: 1 }
+    }).toDestination();
+    
+    // Add some reverb so it doesn't sound completely dry
+    const reverb = new Tone.Reverb(2.5).toDestination();
+    synth.connect(reverb);
+
+    let audioReady = false;
+    document.getElementById('startAudio').addEventListener('click', async (e) => {
+        await Tone.start();
+        audioReady = true;
+        e.target.style.display = 'none';
+        document.getElementById('packetDisplay').innerText = "SYSTEM READY. Drag nodes.";
+    });
+
+    // --- 2. ORCHESTRA DATA MODEL ---
+    // Total 13 Nodes: 1 Hub + 3 Conductors + 9 Players
+    const nodesData = [
+        { id: "HUB", group: "hub", radius: 40, label: "HUB" },
+        // Conductors
+        { id: "T", group: "conductor", radius: 30, label: "TEMPO" },
+        { id: "K", group: "conductor", radius: 30, label: "KEY" },
+        { id: "D", group: "conductor", radius: 30, label: "DISS" },
+        // Players (with mapped synth notes for a lush G Major chord)
+        { id: "V1", group: "violin", radius: 25, label: "V1", note: "G5" },
+        { id: "V2", group: "violin", radius: 25, label: "V2", note: "D5" },
+        { id: "V3", group: "violin", radius: 25, label: "V3", note: "B4" },
+        { id: "V4", group: "violin", radius: 25, label: "V4", note: "G4" },
+        { id: "VA1", group: "viola", radius: 25, label: "VA1", note: "E4" },
+        { id: "VA2", group: "viola", radius: 25, label: "VA2", note: "C4" },
+        { id: "C1", group: "cello", radius: 28, label: "C1", note: "G3" },
+        { id: "C2", group: "cello", radius: 28, label: "C2", note: "D3" },
+        { id: "B1", group: "bass", radius: 35, label: "B1", note: "G2" }
+    ];
+
+    // Create Star Topology links connecting everything to the HUB
+    const linksData = nodesData.filter(n => n.id !== "HUB").map(n => ({
+        source: n.id,
+        target: "HUB",
+        id: `link-${n.id}` // unique ID to style it later
+    }));
+
+    // --- 3. D3.js VISUALIZATION ---
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    const svg = d3.select("#viz")
+        .attr("viewBox", [0, 0, width, height]);
+
+    // Setup Force Simulation
+    const simulation = d3.forceSimulation(nodesData)
+        .force("link", d3.forceLink(linksData).id(d => d.id).distance(150))
+        .force("charge", d3.forceManyBody().strength(-400)) // Repel nodes
+        .force("center", d3.forceCenter(width / 2 + 100, height / 2))
+        .force("collide", d3.forceCollide().radius(d => d.radius + 10));
+
+    // Draw Links
+    const link = svg.append("g")
+        .selectAll("line")
+        .data(linksData)
+        .join("line")
+        .attr("class", "link")
+        .attr("id", d => d.id);
+
+    // Draw Nodes
+    const node = svg.append("g")
+        .selectAll("g")
+        .data(nodesData)
+        .join("g")
+        .attr("class", "node")
+        .call(d3.drag()
+            .on("start", dragstarted)
+            .on("drag", dragged)
+            .on("end", dragended));
+
+    // Add Circles to Nodes
+    node.append("circle")
+        .attr("r", d => d.radius)
+        .attr("class", d => d.group);
+
+    // Add Labels to Nodes
+    node.append("text")
+        .text(d => d.label);
+
+    // Simulation Tick Update
+    simulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+
+        node.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    // --- 4. INTERACTION LOGIC (Bridging UI to Audio) ---
+    
+    function logPacket(str) {
+        const display = document.getElementById('packetDisplay');
+        display.innerText = `RADIO RECEIVED: "${str}"`;
+        // Flash the background of the console for visual feedback
+        const consoleEl = document.getElementById('console');
+        consoleEl.style.background = "rgba(74, 222, 128, 0.2)";
+        setTimeout(() => consoleEl.style.background = "rgba(30, 41, 59, 0.8)", 100);
+    }
+
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        event.subject.fx = event.subject.x;
+        event.subject.fy = event.subject.y;
+
+        // Skip audio/logic if it's the Hub itself
+        if (d.id === "HUB") return;
+
+        // Highlight the network link
+        d3.select(`#link-${d.id}`).classed("active", true);
+
+        if (d.group === "conductor") {
+            // Conductors change state, they don't play notes
+            logPacket(`${d.id}:STATE_CHANGE`);
+            // E.g., if it's the Key node, shift the UI color, etc.
+        } else {
+            // Players trigger notes
+            logPacket(`${d.id}:1`); // 1 = Note On
+            if (audioReady) {
+                synth.triggerAttack(d.note);
+            }
+        }
+        
+        // Visual node feedback (embiggen)
+        d3.select(this).select("circle").transition().duration(100).attr("r", d.radius * 1.2);
+    }
+
+    function dragged(event, d) {
+        event.subject.fx = event.x;
+        event.subject.fy = event.y;
+    }
+
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        event.subject.fx = null;
+        event.subject.fy = null;
+
+        if (d.id === "HUB") return;
+
+        // De-highlight link
+        d3.select(`#link-${d.id}`).classed("active", false);
+
+        if (d.group === "conductor") {
+            // End of conductor interaction
+        } else {
+            // End of player interaction (Note Off)
+            logPacket(`${d.id}:0`); // 0 = Note Off
+            if (audioReady) {
+                synth.triggerRelease(d.note);
+            }
+        }
+
+        // Return node to normal size
+        d3.select(this).select("circle").transition().duration(200).attr("r", d.radius);
+    }
+
+    // Handle Window Resize
+    window.addEventListener('resize', () => {
+        svg.attr("viewBox", [0, 0, window.innerWidth, window.innerHeight]);
+        simulation.force("center", d3.forceCenter(window.innerWidth / 2 + 100, window.innerHeight / 2));
+        simulation.alpha(0.3).restart();
+    });
+
+</script>
+</body>
+</html>

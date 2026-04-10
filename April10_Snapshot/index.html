@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechFest Home</title>
+    <style>
+        :root {
+            --ink: #231815;
+            --paper: #f7f0e4;
+            --paper-deep: #efe4d0;
+            --panel: rgba(255, 250, 241, 0.8);
+            --line: rgba(35, 24, 21, 0.12);
+            --accent: #be5b2d;
+            --accent-deep: #7d2f17;
+            --teal: #2b7369;
+            --gold: #d0a24a;
+            --shadow: rgba(50, 28, 20, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "Avenir Next", "Helvetica Neue", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(208, 162, 74, 0.18), transparent 28%),
+                radial-gradient(circle at 85% 12%, rgba(43, 115, 105, 0.18), transparent 22%),
+                linear-gradient(135deg, var(--paper) 0%, #fbf7ef 46%, var(--paper-deep) 100%);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .page {
+            width: min(1180px, calc(100vw - 32px));
+            margin: 0 auto;
+            padding: 24px 0 40px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav a,
+        .link-card,
+        button,
+        input {
+            border-radius: 999px;
+        }
+
+        .nav a {
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.66);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .hero-panel,
+        .registry-panel {
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background: var(--panel);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 22px 60px var(--shadow);
+        }
+
+        .hero-panel {
+            padding: 30px;
+        }
+
+        .eyebrow {
+            margin: 0 0 12px;
+            color: var(--accent-deep);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            font-size: clamp(2.6rem, 6vw, 4.8rem);
+            line-height: 0.94;
+            letter-spacing: -0.06em;
+            max-width: 9ch;
+        }
+
+        .hero-copy {
+            margin-top: 18px;
+            max-width: 34rem;
+            color: rgba(35, 24, 21, 0.74);
+            font-size: 1.02rem;
+            line-height: 1.6;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .chip {
+            padding: 9px 13px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.68);
+            border: 1px solid var(--line);
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .spotlight {
+            display: grid;
+            gap: 12px;
+            padding: 24px;
+        }
+
+        .spotlight-card {
+            padding: 18px;
+            border-radius: 22px;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.86), rgba(253, 245, 231, 0.92));
+            border: 1px solid rgba(35, 24, 21, 0.08);
+        }
+
+        .spotlight-card strong,
+        .registry-meta strong {
+            display: block;
+        }
+
+        .spotlight-card span {
+            display: block;
+            margin-top: 8px;
+            color: rgba(35, 24, 21, 0.72);
+            line-height: 1.5;
+        }
+
+        .link-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .link-card {
+            display: block;
+            min-height: 220px;
+            padding: 24px;
+            border: 1px solid var(--line);
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.86), rgba(251, 241, 229, 0.94));
+            box-shadow: 0 18px 40px var(--shadow);
+            transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+        }
+
+        .link-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 24px 48px rgba(50, 28, 20, 0.18);
+            border-color: rgba(35, 24, 21, 0.18);
+        }
+
+        .card-index {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 999px;
+            font-weight: 800;
+            background: rgba(255, 255, 255, 0.88);
+            border: 1px solid rgba(35, 24, 21, 0.1);
+        }
+
+        .link-card h2 {
+            margin-top: 28px;
+            font-size: 1.55rem;
+            letter-spacing: -0.03em;
+        }
+
+        .link-card p {
+            margin-top: 12px;
+            color: rgba(35, 24, 21, 0.72);
+            line-height: 1.55;
+        }
+
+        .card-foot {
+            margin-top: 24px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .orchestra-card .card-index,
+        .orchestra-card .card-foot {
+            color: var(--accent-deep);
+        }
+
+        .characters-card .card-index,
+        .characters-card .card-foot {
+            color: var(--teal);
+        }
+
+        .sketch-card .card-index,
+        .sketch-card .card-foot {
+            color: var(--gold);
+        }
+
+        .worksheet-card .card-index,
+        .worksheet-card .card-foot {
+            color: #4a6ea9;
+        }
+
+        .registry-panel {
+            padding: 24px;
+        }
+
+        .registry-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .registry-count {
+            color: rgba(35, 24, 21, 0.65);
+            font-size: 0.92rem;
+            font-weight: 700;
+        }
+
+        .registry-form {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr auto;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.82);
+            color: var(--ink);
+            font: inherit;
+        }
+
+        button {
+            appearance: none;
+            border: 1px solid transparent;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+            color: #fff9f1;
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, 0.74);
+            color: var(--ink);
+            border-color: var(--line);
+        }
+
+        .registry-tools {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .registry-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .registry-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .registry-item,
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 14px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid rgba(35, 24, 21, 0.08);
+        }
+
+        .registry-meta span {
+            display: block;
+            margin-top: 4px;
+            color: rgba(35, 24, 21, 0.62);
+            font-family: "SFMono-Regular", Menlo, monospace;
+            font-size: 0.84rem;
+        }
+
+        .empty-state {
+            justify-content: flex-start;
+            color: rgba(35, 24, 21, 0.66);
+            line-height: 1.5;
+        }
+
+        .delete-btn {
+            padding: 9px 14px;
+            background: rgba(125, 47, 23, 0.08);
+            color: var(--accent-deep);
+            border: 1px solid rgba(125, 47, 23, 0.12);
+        }
+
+        @media (max-width: 980px) {
+            .hero,
+            .link-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .registry-form {
+                grid-template-columns: 1fr;
+            }
+
+            .registry-tools,
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <div class="brand">TechFest Toolkit</div>
+            <nav class="nav" aria-label="Primary">
+                <a href="index.html">Home</a>
+                <a href="string_ensemble_baton_nodes.html">Orchestra</a>
+                <a href="microbit_luddy_characters.html">Characters</a>
+                <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+                <a href="control_worksheet.html">Worksheet</a>
+            </nav>
+        </header>
+
+        <section class="hero">
+            <div class="hero-panel">
+                <p class="eyebrow">Main Tools</p>
+                <h1>Start from one quiet home base.</h1>
+                <p class="hero-copy">This front page now ties the main experiences together: the orchestra, the character field, and the Etch A Sketch pad. The device registry lives here too, so labels stay shared across the pages that listen to the hub.</p>
+                <div class="chip-row">
+                    <div class="chip">Shared local device registry</div>
+                    <div class="chip">One-click navigation</div>
+                    <div class="chip">Hub-ready pages</div>
+                </div>
+            </div>
+
+            <div class="hero-panel spotlight">
+                <div class="spotlight-card">
+                    <strong>Orchestra</strong>
+                    <span>Keep the ensemble as-is and launch straight into the master score.</span>
+                </div>
+                <div class="spotlight-card">
+                    <strong>Characters</strong>
+                    <span>Watch registered devices drift slowly as live characters on the stage.</span>
+                </div>
+                <div class="spotlight-card">
+                    <strong>Sketch Pad</strong>
+                    <span>Draw with motion, save the canvas, and clear the board when you want a fresh pass.</span>
+                </div>
+                <div class="spotlight-card">
+                    <strong>Worksheet</strong>
+                    <span>Plan new button and gesture ideas with a printable classroom worksheet.</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="link-grid">
+            <a class="link-card orchestra-card" href="string_ensemble_baton_nodes.html">
+                <span class="card-index">01</span>
+                <h2>Orchestra</h2>
+                <p>Open the drawing-controls orchestra view directly from home so the ensemble tools and gestures are ready together.</p>
+                <div class="card-foot">Open controls</div>
+            </a>
+            <a class="link-card characters-card" href="microbit_luddy_characters.html">
+                <span class="card-index">02</span>
+                <h2>Characters</h2>
+                <p>See each device as a slow-moving stage character, with registry labels carried over from this page.</p>
+                <div class="card-foot">Open characters</div>
+            </a>
+            <a class="link-card sketch-card" href="microbit_drawing_canvas.html">
+                <span class="card-index">03</span>
+                <h2>Sketch Pad</h2>
+                <p>Launch the rebranded Etch A Sketch pad to draw, save artwork, and trigger color-burst resets on close collisions.</p>
+                <div class="card-foot">Open sketch pad</div>
+            </a>
+            <a class="link-card worksheet-card" href="control_worksheet.html">
+                <span class="card-index">04</span>
+                <h2>Worksheet</h2>
+                <p>Print or fill in a planning sheet with the current control map, open code slots, and new effect ideas for each tool.</p>
+                <div class="card-foot">Open worksheet</div>
+            </a>
+        </section>
+
+        <section class="registry-panel">
+            <div class="registry-header">
+                <div>
+                    <p class="eyebrow">Device Registry</p>
+                    <h2>Saved labels for your micro:bits</h2>
+                </div>
+                <div class="registry-count" id="registryCount">0 saved</div>
+            </div>
+
+            <form class="registry-form" id="registryForm">
+                <input id="serialInput" name="serial" inputmode="numeric" placeholder="Micro:bit serial" aria-label="Microbit serial number">
+                <input id="labelInput" name="label" placeholder="Friendly label" aria-label="Friendly label">
+                <button type="submit">Save Device</button>
+            </form>
+
+            <div class="registry-tools">
+                <p id="registryHelper">Add a numeric serial and label to make the other pages easier to read. Import and export use `registry.json` format.</p>
+                <div class="registry-actions">
+                    <button class="secondary" id="importRegistryBtn" type="button">Import Registry</button>
+                    <button class="secondary" id="exportRegistryBtn" type="button">Export Registry</button>
+                    <button class="secondary" id="clearRegistryBtn" type="button">Clear Registry</button>
+                </div>
+            </div>
+
+            <div class="registry-list" id="registryList"></div>
+        </section>
+    </main>
+
+    <input id="registryFileInput" type="file" accept="application/json,.json" hidden>
+
+    <script>
+        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+        const REGISTRY_FILE_PATH = "registry.json";
+
+        const registryForm = document.getElementById("registryForm");
+        const serialInput = document.getElementById("serialInput");
+        const labelInput = document.getElementById("labelInput");
+        const registryList = document.getElementById("registryList");
+        const registryCount = document.getElementById("registryCount");
+        const registryHelper = document.getElementById("registryHelper");
+        const importRegistryBtn = document.getElementById("importRegistryBtn");
+        const exportRegistryBtn = document.getElementById("exportRegistryBtn");
+        const clearRegistryBtn = document.getElementById("clearRegistryBtn");
+        const registryFileInput = document.getElementById("registryFileInput");
+
+        const state = {
+            registry: loadRegistry()
+        };
+
+        function loadRegistry() {
+            try {
+                const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveRegistry() {
+            window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+        }
+
+        function normalizeRegistryShape(parsed) {
+            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+                : {};
+
+            return Object.fromEntries(
+                Object.entries(candidate)
+                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
+                    .map(([serial, label]) => [serial, label.trim()])
+            );
+        }
+
+        function isValidMicrobitSerial(id) {
+            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
+            const numericId = Number(id);
+            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function renderRegistry() {
+            const entries = Object.entries(state.registry)
+                .sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+
+            registryCount.textContent = `${entries.length} saved`;
+
+            if (!entries.length) {
+                registryList.innerHTML = '<div class="empty-state">No devices saved yet. Add a serial number and a friendly label here, and the other pages will pick them up automatically.</div>';
+                return;
+            }
+
+            registryList.innerHTML = entries.map(([serial, label]) => `
+                <div class="registry-item">
+                    <div class="registry-meta">
+                        <strong>${escapeHtml(label)}</strong>
+                        <span>${escapeHtml(serial)}</span>
+                    </div>
+                    <button class="delete-btn" type="button" data-delete-serial="${escapeHtml(serial)}">Remove</button>
+                </div>
+            `).join("");
+        }
+
+        function saveRegistryEntry(serial, label) {
+            state.registry[serial] = label.trim();
+            saveRegistry();
+            renderRegistry();
+        }
+
+        function removeRegistryEntry(serial) {
+            delete state.registry[serial];
+            saveRegistry();
+            renderRegistry();
+        }
+
+        async function loadRegistryFromFile() {
+            try {
+                const response = await fetch(`${REGISTRY_FILE_PATH}?v=${Date.now()}`, { cache: "no-store" });
+                if (!response.ok) return {};
+                const parsed = await response.json();
+                return normalizeRegistryShape(parsed);
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function replaceRegistry(nextRegistry, helperText) {
+            state.registry = nextRegistry;
+            saveRegistry();
+            renderRegistry();
+            if (helperText) registryHelper.textContent = helperText;
+        }
+
+        function exportRegistryFile() {
+            const payload = `${JSON.stringify(state.registry, null, 2)}\n`;
+            const blob = new Blob([payload], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "registry.json";
+            link.click();
+            URL.revokeObjectURL(url);
+            registryHelper.textContent = "Exported the current registry as registry.json. Move that file with the project or import it on another computer.";
+        }
+
+        async function importRegistryFile(file) {
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+                const importedRegistry = normalizeRegistryShape(parsed);
+                replaceRegistry(importedRegistry, `Imported ${Object.keys(importedRegistry).length} entries from ${file.name}.`);
+            } catch (error) {
+                registryHelper.textContent = "That file could not be read as a registry JSON file.";
+            }
+        }
+
+        registryForm.addEventListener("submit", event => {
+            event.preventDefault();
+
+            const serial = serialInput.value.trim();
+            const label = labelInput.value.trim();
+
+            if (!isValidMicrobitSerial(serial) || !label) {
+                return;
+            }
+
+            saveRegistryEntry(serial, label);
+            serialInput.value = "";
+            labelInput.value = "";
+        });
+
+        registryList.addEventListener("click", event => {
+            const button = event.target.closest("[data-delete-serial]");
+            if (!button) return;
+            removeRegistryEntry(button.getAttribute("data-delete-serial"));
+        });
+
+        clearRegistryBtn.addEventListener("click", () => {
+            replaceRegistry({}, "Cleared the browser registry. You can re-import a registry.json file at any time.");
+        });
+
+        importRegistryBtn.addEventListener("click", () => {
+            registryFileInput.value = "";
+            registryFileInput.click();
+        });
+
+        exportRegistryBtn.addEventListener("click", exportRegistryFile);
+
+        registryFileInput.addEventListener("change", async event => {
+            const [file] = event.target.files || [];
+            await importRegistryFile(file);
+        });
+
+        async function initializeRegistry() {
+            const fileRegistry = await loadRegistryFromFile();
+            const mergedRegistry = { ...fileRegistry, ...state.registry };
+            replaceRegistry(mergedRegistry, "Add a numeric serial and label to make the other pages easier to read. Import and export use registry.json format.");
+        }
+
+        initializeRegistry();
+    </script>
+</body>
+</html>

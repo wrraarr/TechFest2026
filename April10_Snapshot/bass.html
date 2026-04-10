@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philharmonia Double Bass Sampler</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1c1917; /* Deep dark stone/espresso */
+            color: #e2e8f0;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #292524;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+        }
+        h1 { color: #d97706; margin-bottom: 5px; } /* Bronze accent */
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+        select, button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        select { background: #44403c; color: white; border: 1px solid #78716c; }
+        button { background: #b45309; color: white; transition: 0.2s; }
+        button:disabled { background: #44403c; cursor: not-allowed; }
+        
+        #status { font-family: monospace; color: #fdba74; margin-bottom: 20px; }
+
+        /* Keyboard CSS */
+        .keyboard {
+            display: flex;
+            justify-content: center;
+            position: relative;
+            margin-top: 40px;
+            height: 200px;
+            user-select: none;
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+        .key {
+            box-sizing: border-box;
+            border: 1px solid #000;
+            border-radius: 0 0 5px 5px;
+            cursor: pointer;
+            transition: background 0.1s;
+            position: relative;
+        }
+        .white-key {
+            width: 45px;
+            height: 200px;
+            background: #f5f5f4;
+            z-index: 1;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 10px;
+            color: #44403c;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .white-key:active, .white-key.playing { background: #d6d3d1; }
+        
+        .black-key {
+            width: 28px;
+            height: 120px;
+            background: #1c1917;
+            z-index: 2;
+            margin-left: -14px;
+            margin-right: -14px;
+            border-radius: 0 0 4px 4px;
+        }
+        .black-key:active, .black-key.playing { background: #57534e; }
+
+        /* Missing Sample State */
+        .key.disabled {
+            background: #44403c; /* Greyed out */
+            pointer-events: none;
+            opacity: 0.5;
+            border-color: #292524;
+            color: transparent;
+        }
+        .black-key.disabled {
+            background: #1c1917;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎻 Double Bass Master Controller</h1>
+    <p>Dynamically mapping samples from C1 to C5</p>
+
+    <div class="controls">
+        <button id="powerBtn">1. START ENGINE</button>
+        <select id="dynamicSelect" disabled>
+            <option value="molto-pianissimo">Molto-Pianissimo</option>
+            <option value="pianissimo">Pianissimo</option>
+            <option value="piano">Piano</option>
+            <option value="mezzo-piano">Mezzo-Piano</option>
+            <option value="mezzo-forte">Mezzo-Forte</option>
+            <option value="forte" selected>Forte</option>
+            <option value="fortissimo">Fortissimo</option>
+        </select>
+    </div>
+
+    <div id="status">Status: Waiting for engine start...</div>
+
+    <div class="keyboard" id="keyboard">
+        </div>
+</div>
+
+<script>
+    // 1. DATA INGESTION (0.5 Second Samples)
+    const raw05 = `double-bass_A1_05_forte_arco-normal.mp3
+double-bass_A1_05_fortissimo_arco-normal.mp3
+double-bass_A1_05_mezzo-forte_arco-normal.mp3
+double-bass_A1_05_mezzo-piano_arco-normal.mp3
+double-bass_A1_05_molto-pianissimo_arco-normal.mp3
+double-bass_A2_05_forte_arco-normal.mp3
+double-bass_A2_05_fortissimo_arco-normal.mp3
+double-bass_A2_05_mezzo-forte_arco-normal.mp3
+double-bass_A2_05_molto-pianissimo_arco-normal.mp3
+double-bass_A2_05_piano_arco-normal.mp3
+double-bass_A3_05_forte_arco-normal.mp3
+double-bass_A3_05_fortissimo_arco-normal.mp3
+double-bass_A3_05_mezzo-forte_arco-normal.mp3
+double-bass_A3_05_mezzo-piano_arco-normal.mp3
+double-bass_As1_05_forte_arco-normal.mp3
+double-bass_As1_05_fortissimo_arco-normal.mp3
+double-bass_As1_05_molto-pianissimo_arco-normal.mp3
+double-bass_As1_05_piano_arco-normal.mp3
+double-bass_As2_05_forte_arco-normal.mp3
+double-bass_As2_05_fortissimo_arco-normal.mp3
+double-bass_As2_05_mezzo-forte_arco-normal.mp3
+double-bass_As2_05_mezzo-piano_arco-normal.mp3
+double-bass_As2_05_molto-pianissimo_arco-normal.mp3
+double-bass_As3_05_forte_arco-normal.mp3
+double-bass_As3_05_fortissimo_arco-normal.mp3
+double-bass_As3_05_mezzo-forte_arco-normal.mp3
+double-bass_As3_05_mezzo-piano_arco-normal.mp3
+double-bass_As3_05_pianissimo_arco-normal.mp3
+double-bass_B1_05_forte_arco-normal.mp3
+double-bass_B1_05_fortissimo_arco-normal.mp3
+double-bass_B1_05_mezzo-forte_arco-normal.mp3
+double-bass_B1_05_molto-pianissimo_arco-normal.mp3
+double-bass_B1_05_pianissimo_arco-normal.mp3
+double-bass_B1_05_piano_arco-normal.mp3
+double-bass_B2_05_forte_arco-normal.mp3
+double-bass_B2_05_fortissimo_arco-normal.mp3
+double-bass_B2_05_mezzo-forte_arco-normal.mp3
+double-bass_B2_05_molto-pianissimo_arco-normal.mp3
+double-bass_B2_05_pianissimo_arco-normal.mp3
+double-bass_B3_05_forte_arco-normal.mp3
+double-bass_B3_05_fortissimo_arco-normal.mp3
+double-bass_B3_05_mezzo-piano_arco-normal.mp3
+double-bass_B3_05_pianissimo_arco-normal.mp3
+double-bass_C2_05_forte_arco-normal.mp3
+double-bass_C2_05_fortissimo_arco-normal.mp3
+double-bass_C2_05_mezzo-forte_arco-normal.mp3
+double-bass_C2_05_mezzo-piano_arco-normal.mp3
+double-bass_C2_05_piano_arco-normal.mp3
+double-bass_C3_05_forte_arco-normal.mp3
+double-bass_C3_05_fortissimo_arco-normal.mp3
+double-bass_C3_05_mezzo-forte_arco-normal.mp3
+double-bass_C3_05_mezzo-piano_arco-normal.mp3
+double-bass_C3_05_pianissimo_arco-normal.mp3
+double-bass_C4_05_forte_arco-normal.mp3
+double-bass_C4_05_fortissimo_arco-normal.mp3
+double-bass_C4_05_mezzo-forte_arco-normal.mp3
+double-bass_C4_05_mezzo-piano_arco-normal.mp3
+double-bass_C4_05_molto-pianissimo_arco-normal.mp3
+double-bass_C4_05_pianissimo_arco-normal.mp3
+double-bass_Cs2_05_forte_arco-normal.mp3
+double-bass_Cs2_05_fortissimo_arco-normal.mp3
+double-bass_Cs2_05_mezzo-forte_arco-normal.mp3
+double-bass_Cs2_05_mezzo-piano_arco-normal.mp3
+double-bass_Cs2_05_molto-pianissimo_arco-normal.mp3
+double-bass_Cs2_05_pianissimo_arco-normal.mp3
+double-bass_Cs2_05_piano_arco-normal.mp3
+double-bass_Cs3_05_forte_arco-normal.mp3
+double-bass_Cs3_05_fortissimo_arco-normal.mp3
+double-bass_Cs3_05_mezzo-forte_arco-normal.mp3
+double-bass_Cs3_05_mezzo-piano_arco-normal.mp3
+double-bass_Cs3_05_pianissimo_arco-normal.mp3
+double-bass_Cs4_05_forte_arco-normal.mp3
+double-bass_Cs4_05_fortissimo_arco-normal.mp3
+double-bass_Cs4_05_mezzo-forte_arco-normal.mp3
+double-bass_Cs4_05_mezzo-piano_arco-normal.mp3
+double-bass_Cs4_05_pianissimo_arco-normal.mp3
+double-bass_D2_05_forte_arco-normal.mp3
+double-bass_D2_05_fortissimo_arco-normal.mp3
+double-bass_D2_05_mezzo-forte_arco-normal.mp3
+double-bass_D2_05_molto-pianissimo_arco-normal.mp3
+double-bass_D2_05_pianissimo_arco-normal.mp3
+double-bass_D2_05_piano_arco-normal.mp3
+double-bass_D3_05_forte_arco-normal.mp3
+double-bass_D3_05_fortissimo_arco-normal.mp3
+double-bass_D3_05_mezzo-forte_arco-normal.mp3
+double-bass_D3_05_pianissimo_arco-normal.mp3
+double-bass_D4_05_forte_arco-normal.mp3
+double-bass_D4_05_fortissimo_arco-normal.mp3
+double-bass_D4_05_mezzo-forte_arco-normal.mp3
+double-bass_D4_05_mezzo-piano_arco-normal.mp3
+double-bass_D4_05_pianissimo_arco-normal.mp3
+double-bass_Ds2_05_fortissimo_arco-normal.mp3
+double-bass_Ds2_05_mezzo-forte_arco-normal.mp3
+double-bass_Ds2_05_mezzo-piano_arco-normal.mp3
+double-bass_Ds2_05_molto-pianissimo_arco-normal.mp3
+double-bass_Ds2_05_piano_arco-normal.mp3
+double-bass_Ds3_05_forte_arco-normal.mp3
+double-bass_Ds3_05_fortissimo_arco-normal.mp3
+double-bass_Ds3_05_mezzo-forte_arco-normal.mp3
+double-bass_Ds3_05_mezzo-piano_arco-normal.mp3
+double-bass_Ds3_05_molto-pianissimo_arco-normal.mp3
+double-bass_Ds4_05_forte_arco-normal.mp3
+double-bass_Ds4_05_fortissimo_arco-normal.mp3
+double-bass_Ds4_05_mezzo-forte_arco-normal.mp3
+double-bass_Ds4_05_mezzo-piano_arco-normal.mp3
+double-bass_Ds4_05_pianissimo_arco-normal.mp3
+double-bass_E1_05_forte_arco-normal.mp3
+double-bass_E1_05_fortissimo_arco-normal.mp3
+double-bass_E1_05_mezzo-forte_arco-normal.mp3
+double-bass_E1_05_molto-pianissimo_arco-normal.mp3
+double-bass_E1_05_piano_arco-normal.mp3
+double-bass_E2_05_forte_arco-normal.mp3
+double-bass_E2_05_fortissimo_arco-normal.mp3
+double-bass_E2_05_mezzo-forte_arco-normal.mp3
+double-bass_E2_05_mezzo-piano_arco-normal.mp3
+double-bass_E2_05_molto-pianissimo_arco-normal.mp3
+double-bass_E3_05_forte_arco-normal.mp3
+double-bass_E3_05_fortissimo_arco-normal.mp3
+double-bass_E3_05_mezzo-forte_arco-normal.mp3
+double-bass_E3_05_mezzo-piano_arco-normal.mp3
+double-bass_E3_05_pianissimo_arco-normal.mp3
+double-bass_E4_05_fortissimo_arco-normal.mp3
+double-bass_E4_05_mezzo-forte_arco-normal.mp3
+double-bass_E4_05_mezzo-piano_arco-normal.mp3
+double-bass_E4_05_pianissimo_arco-normal.mp3
+double-bass_E4_05_piano_arco-normal.mp3
+double-bass_F1_05_forte_arco-normal.mp3
+double-bass_F1_05_fortissimo_arco-normal.mp3
+double-bass_F1_05_mezzo-forte_arco-normal.mp3
+double-bass_F1_05_molto-pianissimo_arco-normal.mp3
+double-bass_F1_05_piano_arco-normal.mp3
+double-bass_F2_05_forte_arco-normal.mp3
+double-bass_F2_05_fortissimo_arco-normal.mp3
+double-bass_F2_05_mezzo-forte_arco-normal.mp3
+double-bass_F2_05_mezzo-piano_arco-normal.mp3
+double-bass_F2_05_molto-pianissimo_arco-normal.mp3
+double-bass_F3_05_forte_arco-normal.mp3
+double-bass_F3_05_fortissimo_arco-normal.mp3
+double-bass_F3_05_mezzo-forte_arco-normal.mp3
+double-bass_F3_05_molto-pianissimo_arco-normal.mp3
+double-bass_F4_05_forte_arco-normal.mp3
+double-bass_F4_05_fortissimo_arco-normal.mp3
+double-bass_F4_05_mezzo-forte_arco-normal.mp3
+double-bass_F4_05_mezzo-piano_arco-normal.mp3
+double-bass_F4_05_pianissimo_arco-normal.mp3
+double-bass_Fs1_05_forte_arco-normal.mp3
+double-bass_Fs1_05_fortissimo_arco-normal.mp3
+double-bass_Fs1_05_mezzo-forte_arco-normal.mp3
+double-bass_Fs1_05_mezzo-piano_arco-normal.mp3
+double-bass_Fs1_05_molto-pianissimo_arco-normal.mp3
+double-bass_Fs2_05_forte_arco-normal.mp3
+double-bass_Fs2_05_fortissimo_arco-normal.mp3
+double-bass_Fs2_05_mezzo-forte_arco-normal.mp3
+double-bass_Fs2_05_pianissimo_arco-normal.mp3
+double-bass_Fs2_05_piano_arco-normal.mp3
+double-bass_Fs3_05_forte_arco-normal.mp3
+double-bass_Fs3_05_fortissimo_arco-normal.mp3
+double-bass_Fs3_05_mezzo-forte_arco-normal.mp3
+double-bass_Fs3_05_mezzo-piano_arco-normal.mp3
+double-bass_Fs3_05_pianissimo_arco-normal.mp3
+double-bass_Fs4_05_forte_arco-normal.mp3
+double-bass_Fs4_05_fortissimo_arco-normal.mp3
+double-bass_Fs4_05_mezzo-forte_arco-normal.mp3
+double-bass_Fs4_05_mezzo-piano_arco-normal.mp3
+double-bass_Fs4_05_pianissimo_arco-normal.mp3
+double-bass_G1_05_forte_arco-normal.mp3
+double-bass_G1_05_fortissimo_arco-normal.mp3
+double-bass_G1_05_mezzo-forte_arco-normal.mp3
+double-bass_G1_05_mezzo-piano_arco-normal.mp3
+double-bass_G1_05_pianissimo_arco-normal.mp3
+double-bass_G2_05_forte_arco-normal.mp3
+double-bass_G2_05_fortissimo_arco-normal.mp3
+double-bass_G2_05_mezzo-forte_arco-normal.mp3
+double-bass_G2_05_mezzo-piano_arco-normal.mp3
+double-bass_G2_05_pianissimo_arco-normal.mp3
+double-bass_G3_05_forte_arco-normal.mp3
+double-bass_G3_05_fortissimo_arco-normal.mp3
+double-bass_G3_05_mezzo-forte_arco-normal.mp3
+double-bass_G3_05_mezzo-piano_arco-normal.mp3
+double-bass_G3_05_molto-pianissimo_arco-normal.mp3
+double-bass_G3_05_pianissimo_arco-normal.mp3
+double-bass_G4_05_forte_arco-normal.mp3
+double-bass_G4_05_fortissimo_arco-normal.mp3
+double-bass_G4_05_mezzo-forte_arco-normal.mp3
+double-bass_G4_05_mezzo-piano_arco-normal.mp3
+double-bass_G4_05_pianissimo_arco-normal.mp3
+double-bass_Gs1_05_forte_arco-normal.mp3
+double-bass_Gs1_05_fortissimo_arco-normal.mp3
+double-bass_Gs1_05_mezzo-forte_arco-normal.mp3
+double-bass_Gs1_05_mezzo-piano_arco-normal.mp3
+double-bass_Gs1_05_molto-pianissimo_arco-normal.mp3
+double-bass_Gs1_05_pianissimo_arco-normal.mp3
+double-bass_Gs2_05_forte_arco-normal.mp3
+double-bass_Gs2_05_fortissimo_arco-normal.mp3
+double-bass_Gs2_05_mezzo-forte_arco-normal.mp3
+double-bass_Gs3_05_forte_arco-normal.mp3
+double-bass_Gs3_05_fortissimo_arco-normal.mp3
+double-bass_Gs3_05_mezzo-forte_arco-normal.mp3
+double-bass_Gs3_05_mezzo-piano_arco-normal.mp3
+double-bass_Gs3_05_molto-pianissimo_arco-normal.mp3`;
+
+    // 2. DATA INGESTION (1 Second Samples)
+    const raw1 = `double-bass_A1_1_forte_arco-normal.mp3
+double-bass_A1_1_fortissimo_arco-normal.mp3
+double-bass_A1_1_mezzo-forte_arco-normal.mp3
+double-bass_A1_1_molto-pianissimo_arco-normal.mp3
+double-bass_A1_1_pianissimo_arco-normal.mp3
+double-bass_A1_1_piano_arco-normal.mp3
+double-bass_A2_1_forte_arco-normal.mp3
+double-bass_A2_1_fortissimo_arco-normal.mp3
+double-bass_A2_1_mezzo-forte_arco-normal.mp3
+double-bass_A2_1_mezzo-piano_arco-normal.mp3
+double-bass_A2_1_molto-pianissimo_arco-normal.mp3
+double-bass_A3_1_forte_arco-normal.mp3
+double-bass_A3_1_fortissimo_arco-normal.mp3
+double-bass_A3_1_mezzo-forte_arco-normal.mp3
+double-bass_A3_1_mezzo-piano_arco-normal.mp3
+double-bass_A3_1_molto-pianissimo_arco-normal.mp3
+double-bass_A3_1_pianissimo_arco-normal.mp3
+double-bass_As1_1_forte_arco-normal.mp3
+double-bass_As1_1_fortissimo_arco-normal.mp3
+double-bass_As1_1_mezzo-forte_arco-normal.mp3
+double-bass_As1_1_mezzo-piano_arco-normal.mp3
+double-bass_As1_1_molto-pianissimo_arco-normal.mp3
+double-bass_As1_1_piano_arco-normal.mp3
+double-bass_As2_1_forte_arco-normal.mp3
+double-bass_As2_1_fortissimo_arco-normal.mp3
+double-bass_As2_1_mezzo-forte_arco-normal.mp3
+double-bass_As2_1_mezzo-piano_arco-normal.mp3
+double-bass_As2_1_molto-pianissimo_arco-normal.mp3
+double-bass_As3_1_forte_arco-normal.mp3
+double-bass_As3_1_fortissimo_arco-normal.mp3
+double-bass_As3_1_mezzo-forte_arco-normal.mp3
+double-bass_As3_1_mezzo-piano_arco-normal.mp3
+double-bass_As3_1_pianissimo_arco-normal.mp3
+double-bass_B1_1_forte_arco-normal.mp3
+double-bass_B1_1_fortissimo_arco-normal.mp3
+double-bass_B1_1_mezzo-forte_arco-normal.mp3
+double-bass_B1_1_molto-pianissimo_arco-normal.mp3
+double-bass_B1_1_piano_arco-normal.mp3
+double-bass_B2_1_forte_arco-normal.mp3
+double-bass_B2_1_fortissimo_arco-normal.mp3
+double-bass_B2_1_mezzo-forte_arco-normal.mp3
+double-bass_B2_1_mezzo-piano_arco-normal.mp3
+double-bass_B2_1_pianissimo_arco-normal.mp3
+double-bass_B3_1_forte_arco-normal.mp3
+double-bass_B3_1_fortissimo_arco-normal.mp3
+double-bass_B3_1_mezzo-piano_arco-normal.mp3
+double-bass_B3_1_pianissimo_arco-normal.mp3
+double-bass_C1_1_forte_arco-normal.mp3
+double-bass_C1_1_mezzo-forte_arco-normal.mp3
+double-bass_C1_1_mezzo-piano_arco-normal.mp3
+double-bass_C2_1_forte_arco-normal.mp3
+double-bass_C2_1_fortissimo_arco-normal.mp3
+double-bass_C2_1_mezzo-forte_arco-normal.mp3
+double-bass_C2_1_mezzo-piano_arco-normal.mp3
+double-bass_C2_1_pianissimo_arco-normal.mp3
+double-bass_C2_1_piano_arco-normal.mp3
+double-bass_C3_1_forte_arco-normal.mp3
+double-bass_C3_1_fortissimo_arco-normal.mp3
+double-bass_C3_1_mezzo-forte_arco-normal.mp3
+double-bass_C3_1_mezzo-piano_arco-normal.mp3
+double-bass_C3_1_molto-pianissimo_arco-normal.mp3
+double-bass_C3_1_pianissimo_arco-normal.mp3
+double-bass_C3_1_piano_arco-normal.mp3
+double-bass_C4_1_forte_arco-normal.mp3
+double-bass_C4_1_fortissimo_arco-normal.mp3
+double-bass_C4_1_mezzo-forte_arco-normal.mp3
+double-bass_C4_1_mezzo-piano_arco-normal.mp3
+double-bass_C4_1_pianissimo_arco-normal.mp3
+double-bass_Cs1_1_forte_arco-normal.mp3
+double-bass_Cs1_1_fortissimo_arco-normal.mp3
+double-bass_Cs1_1_mezzo-forte_arco-normal.mp3
+double-bass_Cs1_1_mezzo-piano_arco-normal.mp3
+double-bass_Cs1_1_piano_arco-normal.mp3
+double-bass_Cs2_1_forte_arco-normal.mp3
+double-bass_Cs2_1_fortissimo_arco-normal.mp3
+double-bass_Cs2_1_mezzo-forte_arco-normal.mp3
+double-bass_Cs2_1_mezzo-piano_arco-normal.mp3
+double-bass_Cs2_1_pianissimo_arco-normal.mp3
+double-bass_Cs2_1_piano_arco-normal.mp3
+double-bass_Cs3_1_forte_arco-normal.mp3
+double-bass_Cs3_1_fortissimo_arco-normal.mp3
+double-bass_Cs3_1_mezzo-forte_arco-normal.mp3
+double-bass_Cs3_1_mezzo-piano_arco-normal.mp3
+double-bass_Cs3_1_molto-pianissimo_arco-normal.mp3
+double-bass_Cs3_1_pianissimo_arco-normal.mp3
+double-bass_Cs4_1_forte_arco-normal.mp3
+double-bass_Cs4_1_fortissimo_arco-normal.mp3
+double-bass_Cs4_1_mezzo-forte_arco-normal.mp3
+double-bass_Cs4_1_mezzo-piano_arco-normal.mp3
+double-bass_Cs4_1_pianissimo_arco-normal.mp3
+double-bass_D1_1_forte_arco-normal.mp3
+double-bass_D1_1_fortissimo_arco-normal.mp3
+double-bass_D1_1_mezzo-forte_arco-normal.mp3
+double-bass_D1_1_piano_arco-normal.mp3
+double-bass_D2_1_forte_arco-normal.mp3
+double-bass_D2_1_fortissimo_arco-normal.mp3
+double-bass_D2_1_mezzo-forte_arco-normal.mp3
+double-bass_D2_1_pianissimo_arco-normal.mp3
+double-bass_D2_1_piano_arco-normal.mp3
+double-bass_D3_1_forte_arco-normal.mp3
+double-bass_D3_1_fortissimo_arco-normal.mp3
+double-bass_D3_1_mezzo-forte_arco-normal.mp3
+double-bass_D3_1_mezzo-piano_arco-normal.mp3
+double-bass_D3_1_pianissimo_arco-normal.mp3
+double-bass_D4_1_forte_arco-normal.mp3
+double-bass_D4_1_fortissimo_arco-normal.mp3
+double-bass_D4_1_mezzo-forte_arco-normal.mp3
+double-bass_D4_1_mezzo-piano_arco-normal.mp3
+double-bass_Ds1_1_fortissimo_arco-normal.mp3
+double-bass_Ds1_1_mezzo-forte_arco-normal.mp3
+double-bass_Ds1_1_piano_arco-normal.mp3
+double-bass_Ds2_1_forte_arco-normal.mp3
+double-bass_Ds2_1_fortissimo_arco-normal.mp3
+double-bass_Ds2_1_mezzo-forte_arco-normal.mp3
+double-bass_Ds2_1_mezzo-piano_arco-normal.mp3
+double-bass_Ds2_1_molto-pianissimo_arco-normal.mp3
+double-bass_Ds2_1_piano_arco-normal.mp3
+double-bass_Ds3_1_forte_arco-normal.mp3
+double-bass_Ds3_1_fortissimo_arco-normal.mp3
+double-bass_Ds3_1_mezzo-piano_arco-normal.mp3
+double-bass_Ds3_1_molto-pianissimo_arco-normal.mp3
+double-bass_Ds4_1_forte_arco-normal.mp3
+double-bass_Ds4_1_fortissimo_arco-normal.mp3
+double-bass_Ds4_1_mezzo-forte_arco-normal.mp3
+double-bass_Ds4_1_mezzo-piano_arco-normal.mp3
+double-bass_Ds4_1_pianissimo_arco-normal.mp3
+double-bass_E1_1_forte_arco-normal.mp3
+double-bass_E1_1_fortissimo_arco-normal.mp3
+double-bass_E1_1_mezzo-forte_arco-normal.mp3
+double-bass_E1_1_molto-pianissimo_arco-normal.mp3
+double-bass_E1_1_piano_arco-normal.mp3
+double-bass_E2_1_forte_arco-normal.mp3
+double-bass_E2_1_fortissimo_arco-normal.mp3
+double-bass_E2_1_mezzo-forte_arco-normal.mp3
+double-bass_E2_1_mezzo-piano_arco-normal.mp3
+double-bass_E2_1_molto-pianissimo_arco-normal.mp3
+double-bass_E2_1_pianissimo_arco-normal.mp3
+double-bass_E3_1_forte_arco-normal.mp3
+double-bass_E3_1_fortissimo_arco-normal.mp3
+double-bass_E3_1_mezzo-forte_arco-normal.mp3
+double-bass_E3_1_mezzo-piano_arco-normal.mp3
+double-bass_E3_1_pianissimo_arco-normal.mp3
+double-bass_E4_1_forte_arco-normal.mp3
+double-bass_E4_1_fortissimo_arco-normal.mp3
+double-bass_E4_1_mezzo-forte_arco-normal.mp3
+double-bass_E4_1_mezzo-piano_arco-normal.mp3
+double-bass_E4_1_molto-pianissimo_arco-normal.mp3
+double-bass_F1_1_forte_arco-normal.mp3
+double-bass_F1_1_fortissimo_arco-normal.mp3
+double-bass_F1_1_mezzo-forte_arco-normal.mp3
+double-bass_F1_1_mezzo-piano_arco-normal.mp3
+double-bass_F1_1_molto-pianissimo_arco-normal.mp3
+double-bass_F2_1_forte_arco-normal.mp3
+double-bass_F2_1_fortissimo_arco-normal.mp3
+double-bass_F2_1_mezzo-forte_arco-normal.mp3
+double-bass_F2_1_mezzo-piano_arco-normal.mp3
+double-bass_F2_1_pianissimo_arco-normal.mp3
+double-bass_F3_1_forte_arco-normal.mp3
+double-bass_F3_1_fortissimo_arco-normal.mp3
+double-bass_F3_1_mezzo-forte_arco-normal.mp3
+double-bass_F3_1_mezzo-piano_arco-normal.mp3
+double-bass_F3_1_molto-pianissimo_arco-normal.mp3
+double-bass_F4_1_forte_arco-normal.mp3
+double-bass_F4_1_fortissimo_arco-normal.mp3
+double-bass_F4_1_mezzo-forte_arco-normal.mp3
+double-bass_F4_1_mezzo-piano_arco-normal.mp3
+double-bass_F4_1_pianissimo_arco-normal.mp3
+double-bass_F4_1_piano_arco-normal.mp3
+double-bass_Fs1_1_forte_arco-normal.mp3
+double-bass_Fs1_1_fortissimo_arco-normal.mp3
+double-bass_Fs1_1_mezzo-forte_arco-normal.mp3
+double-bass_Fs1_1_mezzo-piano_arco-normal.mp3
+double-bass_Fs1_1_molto-pianissimo_arco-normal.mp3
+double-bass_Fs2_1_forte_arco-normal.mp3
+double-bass_Fs2_1_fortissimo_arco-normal.mp3
+double-bass_Fs2_1_mezzo-forte_arco-normal.mp3
+double-bass_Fs2_1_mezzo-piano_arco-normal.mp3
+double-bass_Fs2_1_molto-pianissimo_arco-normal.mp3
+double-bass_Fs3_1_forte_arco-normal.mp3
+double-bass_Fs3_1_fortissimo_arco-normal.mp3
+double-bass_Fs3_1_mezzo-forte_arco-normal.mp3
+double-bass_Fs3_1_mezzo-piano_arco-normal.mp3
+double-bass_Fs3_1_pianissimo_arco-normal.mp3
+double-bass_Fs4_1_forte_arco-normal.mp3
+double-bass_Fs4_1_fortissimo_arco-normal.mp3
+double-bass_Fs4_1_mezzo-forte_arco-normal.mp3
+double-bass_Fs4_1_mezzo-piano_arco-normal.mp3
+double-bass_Fs4_1_pianissimo_arco-normal.mp3
+double-bass_G1_1_forte_arco-normal.mp3
+double-bass_G1_1_fortissimo_arco-normal.mp3
+double-bass_G1_1_mezzo-forte_arco-normal.mp3
+double-bass_G1_1_mezzo-piano_arco-normal.mp3
+double-bass_G1_1_pianissimo_arco-normal.mp3
+double-bass_G2_1_forte_arco-normal.mp3
+double-bass_G2_1_fortissimo_arco-normal.mp3
+double-bass_G2_1_mezzo-forte_arco-normal.mp3
+double-bass_G2_1_mezzo-piano_arco-normal.mp3
+double-bass_G2_1_pianissimo_arco-normal.mp3
+double-bass_G3_1_forte_arco-normal.mp3
+double-bass_G3_1_fortissimo_arco-normal.mp3
+double-bass_G3_1_mezzo-forte_arco-normal.mp3
+double-bass_G3_1_mezzo-piano_arco-normal.mp3
+double-bass_G3_1_molto-pianissimo_arco-normal.mp3
+double-bass_G4_1_fortissimo_arco-normal.mp3
+double-bass_G4_1_mezzo-forte_arco-normal.mp3
+double-bass_G4_1_mezzo-piano_arco-normal.mp3
+double-bass_G4_1_pianissimo_arco-normal.mp3
+double-bass_Gs1_1_forte_arco-normal.mp3
+double-bass_Gs1_1_fortissimo_arco-normal.mp3
+double-bass_Gs1_1_mezzo-forte_arco-normal.mp3
+double-bass_Gs1_1_mezzo-piano_arco-normal.mp3
+double-bass_Gs1_1_molto-pianissimo_arco-normal.mp3
+double-bass_Gs2_1_forte_arco-normal.mp3
+double-bass_Gs2_1_fortissimo_arco-normal.mp3
+double-bass_Gs2_1_mezzo-forte_arco-normal.mp3
+double-bass_Gs2_1_mezzo-piano_arco-normal.mp3
+double-bass_Gs2_1_pianissimo_arco-normal.mp3
+double-bass_Gs2_1_piano_arco-normal.mp3
+double-bass_Gs3_1_forte_arco-normal.mp3
+double-bass_Gs3_1_fortissimo_arco-normal.mp3
+double-bass_Gs3_1_mezzo-forte_arco-normal.mp3
+double-bass_Gs3_1_mezzo-piano_arco-normal.mp3
+double-bass_Gs3_1_molto-pianissimo_arco-normal.mp3
+double-bass_Gs3_1_piano_arco-normal.mp3`;
+
+    // 3. PARSING LOGIC
+    const db = {
+        'molto-pianissimo': {}, 'pianissimo': {}, 'piano': {}, 'mezzo-piano': {},
+        'mezzo-forte': {}, 'forte': {}, 'fortissimo': {}
+    };
+
+    function processList(listString) {
+        const lines = listString.split('\n');
+        lines.forEach(line => {
+            line = line.trim();
+            if (!line) return;
+            // Regex to extract Double Bass specific files
+            const match = line.match(/double-bass_([A-G]s?\d)_(05|1)_([a-z-]+)_arco-normal\.mp3/);
+            if (match) {
+                const rawNote = match[1];
+                const dynamic = match[3];
+                // Convert Philharmonia "s" to Tone.js "#" (e.g., Cs1 -> C#1)
+                const toneNote = rawNote.replace('s', '#');
+                
+                // Because we parse the 05 list first and the 1 list second, 
+                // the 1-second sample will automatically overwrite the 05 sample if it exists.
+                if (db[dynamic]) {
+                    db[dynamic][toneNote] = line;
+                }
+            }
+        });
+    }
+
+    // Process fallback (0.5s) first, then optimal (1s) to overwrite
+    processList(raw05); 
+    processList(raw1);  
+
+    // 4. UI AND AUDIO LOGIC
+    let currentSampler = null;
+    let isContextStarted = false;
+    
+    // **UPDATE THIS PATH if your double bass samples are in a different subfolder**
+    const localPath = "Strings/double-bass/"; 
+    
+    const keyboardEl = document.getElementById('keyboard');
+    const dynamicSelect = document.getElementById('dynamicSelect');
+    const statusEl = document.getElementById('status');
+    const powerBtn = document.getElementById('powerBtn');
+
+    // Note array spanning C1 (Extended Low C) to C5
+    const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const allNotes = [];
+    for (let oct = 1; oct <= 5; oct++) {
+        noteNames.forEach(n => {
+            if (oct === 5 && n !== "C") return; // Stop exactly at C5
+            allNotes.push(n + oct);
+        });
+    }
+
+    // Build the Keyboard DOM
+    function buildKeyboard() {
+        allNotes.forEach(note => {
+            const isBlack = note.includes('#');
+            const keyEl = document.createElement('div');
+            keyEl.className = `key ${isBlack ? 'black-key' : 'white-key'}`;
+            keyEl.dataset.note = note;
+            
+            if (!isBlack) {
+                keyEl.innerText = note;
+            }
+
+            // Mouse Events
+            keyEl.addEventListener('mousedown', () => triggerNoteOn(note, keyEl));
+            keyEl.addEventListener('mouseup', () => triggerNoteOff(note, keyEl));
+            keyEl.addEventListener('mouseleave', () => triggerNoteOff(note, keyEl));
+
+            keyboardEl.appendChild(keyEl);
+        });
+    }
+
+    function triggerNoteOn(note, el) {
+        if (!isContextStarted || !currentSampler || el.classList.contains('disabled')) return;
+        el.classList.add('playing');
+        currentSampler.triggerAttack(note);
+    }
+
+    function triggerNoteOff(note, el) {
+        if (!isContextStarted || !currentSampler) return;
+        el.classList.remove('playing');
+        currentSampler.triggerRelease(note);
+    }
+
+    // Dynamic Switching Logic
+    async function updateDynamicLevel() {
+        const dyn = dynamicSelect.value;
+        const availableNotesForDyn = db[dyn];
+
+        // 1. Update Keyboard UI (Grey out missing notes)
+        document.querySelectorAll('.key').forEach(keyEl => {
+            const note = keyEl.dataset.note;
+            if (!availableNotesForDyn[note]) {
+                keyEl.classList.add('disabled');
+            } else {
+                keyEl.classList.remove('disabled');
+            }
+        });
+
+        // 2. Load the specific Sampler map
+        statusEl.innerText = `Status: Loading ${dyn.toUpperCase()} samples...`;
+        statusEl.style.color = "#d97706"; // Amber loading text
+        dynamicSelect.disabled = true;
+
+        if (currentSampler) {
+            currentSampler.dispose(); // Free memory of old samples
+        }
+
+        currentSampler = new Tone.Sampler({
+            urls: availableNotesForDyn,
+            baseUrl: localPath,
+            onload: () => {
+                statusEl.innerText = `Status: Bass ${dyn.toUpperCase()} Ready!`;
+                statusEl.style.color = "#10b981"; // Emerald green ready text
+                dynamicSelect.disabled = false;
+            }
+        }).toDestination();
+    }
+
+    // Event Listeners
+    powerBtn.addEventListener('click', async () => {
+        await Tone.start();
+        isContextStarted = true;
+        powerBtn.style.display = "none";
+        dynamicSelect.disabled = false;
+        
+        buildKeyboard();
+        updateDynamicLevel(); // Load initial default
+    });
+
+    dynamicSelect.addEventListener('change', updateDynamicLevel);
+
+</script>
+</body>
+</html>

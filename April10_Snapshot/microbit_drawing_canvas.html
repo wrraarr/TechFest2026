@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Etch A Sketch Pad</title>
+    <style>
+        :root {
+            --ink: #1c1917;
+            --paper: #f7f1e7;
+            --panel: rgba(255, 251, 245, 0.8);
+            --line: rgba(28, 25, 23, 0.14);
+            --accent: #bf5d36;
+            --shadow: rgba(48, 31, 24, 0.12);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Avenir Next", "Helvetica Neue", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, rgba(242, 191, 112, 0.18), transparent 24%),
+                radial-gradient(circle at 85% 10%, rgba(69, 141, 160, 0.16), transparent 20%),
+                linear-gradient(135deg, #f4ede0 0%, var(--paper) 55%, #efe4d4 100%);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .page {
+            min-height: 100vh;
+            padding: 88px 18px 18px;
+        }
+
+        .nav {
+            position: fixed;
+            top: 18px;
+            left: 18px;
+            z-index: 20;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav a {
+            padding: 10px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.76);
+            box-shadow: 0 10px 28px var(--shadow);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        h1 { margin: 0; }
+
+        h1 {
+            font-size: 1.08rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button {
+            appearance: none;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 10px 14px;
+            background: rgba(255, 255, 255, 0.86);
+            color: var(--ink);
+            font: inherit;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 10px 24px var(--shadow);
+        }
+
+        button.primary {
+            border-color: transparent;
+            background: linear-gradient(135deg, #d17644, var(--accent));
+            color: #fff9f3;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            height: calc(100vh - 150px);
+        }
+
+        canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32), 0 24px 60px var(--shadow);
+        }
+
+        #nodeCanvas {
+            background: transparent;
+        }
+
+        @media (max-width: 900px) {
+            .toolbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .canvas-wrap {
+                height: 76vh;
+            }
+
+            .page {
+                padding-top: 112px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav" aria-label="Primary">
+        <a href="index.html">Home</a>
+        <a href="string_ensemble_baton_nodes.html">Orchestra</a>
+        <a href="microbit_luddy_characters.html">Characters</a>
+        <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+    </nav>
+
+    <div class="page">
+        <div class="toolbar">
+            <h1>Etch A Sketch</h1>
+            <div class="button-row">
+                <button id="connectBtn" class="primary" type="button">Connect Hub</button>
+                <button id="saveBtn" type="button">Save Drawing</button>
+                <button id="clearBtn" type="button">Clear</button>
+            </div>
+        </div>
+
+        <div class="canvas-wrap">
+            <canvas id="trailCanvas"></canvas>
+            <canvas id="nodeCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+        const REGISTRY_FILE_PATH = "registry.json";
+        const MICROBIT_USB_FILTERS = [
+            { usbVendorId: 0x0D28 }
+        ];
+        const MAX_VISIBLE_NODES = 8;
+        const RAINBOW = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"];
+
+        const state = {
+            nodes: new Map(),
+            registry: {},
+            explosionParticles: [],
+            serial: {
+                port: null,
+                reader: null,
+                inputDone: null,
+                keepReading: false
+            }
+        };
+
+        const trailCanvas = document.getElementById("trailCanvas");
+        const nodeCanvas = document.getElementById("nodeCanvas");
+        const trailCtx = trailCanvas.getContext("2d");
+        const nodeCtx = nodeCanvas.getContext("2d");
+
+        function loadRegistry() {
+            try {
+                const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveRegistry() {
+            window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+        }
+
+        function normalizeRegistryShape(parsed) {
+            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+                : {};
+
+            return Object.fromEntries(
+                Object.entries(candidate)
+                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
+                    .map(([serial, label]) => [serial, label.trim()])
+            );
+        }
+
+        async function loadRegistryFromFile() {
+            try {
+                const response = await fetch(`${REGISTRY_FILE_PATH}?v=${Date.now()}`, { cache: "no-store" });
+                if (!response.ok) return {};
+                const parsed = await response.json();
+                return normalizeRegistryShape(parsed);
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function displayNameFor(id) {
+            return state.registry[id] || id;
+        }
+
+        function isValidMicrobitSerial(id) {
+            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
+            const numericId = Number(id);
+            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
+        }
+
+        function isAllowedDevice(id) {
+            return Boolean(state.registry[id]);
+        }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function mapRange(value, inMin, inMax, outMin, outMax) {
+            const ratio = (value - inMin) / (inMax - inMin || 1);
+            return outMin + ratio * (outMax - outMin);
+        }
+
+        function createNode(id, index) {
+            return {
+                id,
+                index,
+                x: 0,
+                y: 0,
+                targetX: 0,
+                targetY: 0,
+                accelX: 0,
+                accelY: 0,
+                light: 50,
+                penDown: false,
+                velocityX: 0,
+                velocityY: 0,
+                penScale: 1,
+                colorIndex: index % RAINBOW.length,
+                color: RAINBOW[index % RAINBOW.length],
+                prevDrawX: null,
+                prevDrawY: null,
+                collisionCooldown: 0
+            };
+        }
+
+        function nodeRadius(node) {
+            return mapRange(node.light, 0, 255, 8, 36) * node.penScale;
+        }
+
+        function layoutNodes() {
+            const width = nodeCanvas.clientWidth;
+            const height = nodeCanvas.clientHeight;
+            const count = Math.max(state.nodes.size, 1);
+            const columns = Math.min(2, count);
+            const rows = Math.ceil(count / columns);
+            const colGap = width / (columns + 1);
+            const rowGap = height / (rows + 1);
+
+            for (const node of state.nodes.values()) {
+                const col = node.index % columns;
+                const row = Math.floor(node.index / columns);
+                node.x = colGap * (col + 1);
+                node.y = rowGap * (row + 1);
+                node.targetX = node.x;
+                node.targetY = node.y;
+                node.prevDrawX = node.x;
+                node.prevDrawY = node.y;
+            }
+        }
+
+        function ensureNode(id) {
+            if (!isAllowedDevice(id)) return null;
+            if (state.nodes.has(id)) return state.nodes.get(id);
+            if (state.nodes.size >= MAX_VISIBLE_NODES) return null;
+
+            const node = createNode(id, state.nodes.size);
+            state.nodes.set(id, node);
+            layoutNodes();
+            return node;
+        }
+
+        function pruneNodes() {
+            for (const id of [...state.nodes.keys()]) {
+                if (!isAllowedDevice(id)) state.nodes.delete(id);
+            }
+
+            let index = 0;
+            for (const node of state.nodes.values()) {
+                node.index = index;
+                node.color = RAINBOW[node.colorIndex % RAINBOW.length];
+                index += 1;
+            }
+
+            layoutNodes();
+        }
+
+        function resizeCanvases() {
+            const ratio = window.devicePixelRatio || 1;
+            for (const canvas of [trailCanvas, nodeCanvas]) {
+                const bounds = canvas.getBoundingClientRect();
+                canvas.width = Math.round(bounds.width * ratio);
+                canvas.height = Math.round(bounds.height * ratio);
+            }
+
+            trailCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            nodeCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+            layoutNodes();
+        }
+
+        function clearDrawing() {
+            trailCtx.clearRect(0, 0, trailCanvas.clientWidth, trailCanvas.clientHeight);
+            state.explosionParticles.length = 0;
+            for (const node of state.nodes.values()) {
+                node.prevDrawX = node.x;
+                node.prevDrawY = node.y;
+            }
+        }
+
+        function saveDrawing() {
+            const outputCanvas = document.createElement("canvas");
+            outputCanvas.width = trailCanvas.width;
+            outputCanvas.height = trailCanvas.height;
+
+            const outputCtx = outputCanvas.getContext("2d");
+            outputCtx.fillStyle = "#fffaf3";
+            outputCtx.fillRect(0, 0, outputCanvas.width, outputCanvas.height);
+            outputCtx.drawImage(trailCanvas, 0, 0);
+            outputCtx.drawImage(nodeCanvas, 0, 0);
+
+            const link = document.createElement("a");
+            const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+            link.href = outputCanvas.toDataURL("image/png");
+            link.download = `etch-a-sketch-${stamp}.png`;
+            link.click();
+        }
+
+        function addExplosionTrail(x, y, colors) {
+            for (let index = 0; index < 26; index += 1) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 10 + Math.random() * 52;
+                const radius = 1.8 + Math.random() * 4.2;
+
+                trailCtx.fillStyle = colors[index % colors.length];
+                trailCtx.beginPath();
+                trailCtx.arc(
+                    x + Math.cos(angle) * distance,
+                    y + Math.sin(angle) * distance,
+                    radius,
+                    0,
+                    Math.PI * 2
+                );
+                trailCtx.fill();
+            }
+        }
+
+        function addExplosionParticles(x, y, colors) {
+            for (let index = 0; index < 22; index += 1) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 3.5;
+                state.explosionParticles.push({
+                    x,
+                    y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: 2 + Math.random() * 3.5,
+                    life: 28 + Math.floor(Math.random() * 18),
+                    ttl: 28 + Math.floor(Math.random() * 18),
+                    color: colors[index % colors.length]
+                });
+            }
+        }
+
+        function resetNodeToMiddle(node, slotIndex, totalSlots) {
+            const width = nodeCanvas.clientWidth;
+            const height = nodeCanvas.clientHeight;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const angle = (Math.PI * 2 * slotIndex) / Math.max(totalSlots, 2);
+            const spread = 18;
+
+            node.x = centerX + Math.cos(angle) * spread;
+            node.y = centerY + Math.sin(angle) * spread;
+            node.targetX = node.x;
+            node.targetY = node.y;
+            node.prevDrawX = node.x;
+            node.prevDrawY = node.y;
+            node.velocityX = 0;
+            node.velocityY = 0;
+            node.penDown = false;
+            node.collisionCooldown = 34;
+        }
+
+        function triggerCollision(nodeA, nodeB) {
+            const x = (nodeA.x + nodeB.x) / 2;
+            const y = (nodeA.y + nodeB.y) / 2;
+            const colors = [nodeA.color, nodeB.color, nodeA.color, nodeB.color];
+
+            addExplosionTrail(x, y, colors);
+            addExplosionParticles(x, y, colors);
+            resetNodeToMiddle(nodeA, 0, 2);
+            resetNodeToMiddle(nodeB, 1, 2);
+        }
+
+        function drawExplosionParticles() {
+            state.explosionParticles = state.explosionParticles.filter(particle => particle.life > 0);
+
+            for (const particle of state.explosionParticles) {
+                const alpha = particle.life / particle.ttl;
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.vx *= 0.98;
+                particle.vy *= 0.98;
+                particle.life -= 1;
+
+                nodeCtx.globalAlpha = alpha;
+                nodeCtx.fillStyle = particle.color;
+                nodeCtx.beginPath();
+                nodeCtx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                nodeCtx.fill();
+            }
+
+            nodeCtx.globalAlpha = 1;
+        }
+
+        function detectCollisions(nodes) {
+            for (let index = 0; index < nodes.length; index += 1) {
+                for (let compareIndex = index + 1; compareIndex < nodes.length; compareIndex += 1) {
+                    const nodeA = nodes[index];
+                    const nodeB = nodes[compareIndex];
+
+                    if (nodeA.collisionCooldown > 0 || nodeB.collisionCooldown > 0) {
+                        continue;
+                    }
+
+                    const dx = nodeA.x - nodeB.x;
+                    const dy = nodeA.y - nodeB.y;
+                    const distance = Math.hypot(dx, dy);
+                    const threshold = Math.max(44, (nodeRadius(nodeA) + nodeRadius(nodeB)) * 0.62);
+
+                    if (distance < threshold) {
+                        triggerCollision(nodeA, nodeB);
+                    }
+                }
+            }
+        }
+
+        function drawFrame() {
+            const width = nodeCanvas.clientWidth;
+            const height = nodeCanvas.clientHeight;
+            nodeCtx.clearRect(0, 0, width, height);
+
+            const nodes = [...state.nodes.values()];
+            for (const node of nodes) {
+                const moveStep = 4.4;
+                node.targetX = clamp(node.targetX + node.velocityX * moveStep, 36, width - 36);
+                node.targetY = clamp(node.targetY + node.velocityY * moveStep, 36, height - 36);
+                node.x += (node.targetX - node.x) * 0.16;
+                node.y += (node.targetY - node.y) * 0.16;
+                node.collisionCooldown = Math.max(0, node.collisionCooldown - 1);
+
+                const radius = nodeRadius(node);
+
+                if (node.penDown) {
+                    trailCtx.strokeStyle = node.color;
+                    trailCtx.fillStyle = node.color;
+                    trailCtx.lineWidth = Math.max(2, radius * 0.4);
+                    trailCtx.lineCap = "round";
+                    trailCtx.lineJoin = "round";
+
+                    trailCtx.beginPath();
+                    trailCtx.arc(node.x, node.y, Math.max(1.5, radius * 0.22), 0, Math.PI * 2);
+                    trailCtx.fill();
+
+                    if (node.prevDrawX !== null && node.prevDrawY !== null) {
+                        trailCtx.beginPath();
+                        trailCtx.moveTo(node.prevDrawX, node.prevDrawY);
+                        trailCtx.lineTo(node.x, node.y);
+                        trailCtx.stroke();
+                    }
+                }
+
+                node.prevDrawX = node.x;
+                node.prevDrawY = node.y;
+            }
+
+            detectCollisions(nodes);
+
+            for (const node of nodes) {
+                const radius = nodeRadius(node);
+                nodeCtx.fillStyle = node.color;
+                nodeCtx.beginPath();
+                nodeCtx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+                nodeCtx.fill();
+
+                nodeCtx.strokeStyle = "#111827";
+                nodeCtx.lineWidth = node.penDown ? 3 : 1;
+                nodeCtx.beginPath();
+                nodeCtx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+                nodeCtx.stroke();
+
+                nodeCtx.fillStyle = "#111827";
+                nodeCtx.font = "12px SFMono-Regular, Menlo, monospace";
+                nodeCtx.textAlign = "center";
+                nodeCtx.fillText(displayNameFor(node.id), node.x, node.y - radius - 10);
+            }
+
+            drawExplosionParticles();
+            requestAnimationFrame(drawFrame);
+        }
+
+        function applyNodeUpdate(id, patch) {
+            const node = ensureNode(id);
+            if (!node) return;
+
+            if (Number.isFinite(patch.ax)) node.accelX = clamp(Math.round(patch.ax), -2048, 2048);
+            if (Number.isFinite(patch.ay)) node.accelY = clamp(Math.round(patch.ay), -2048, 2048);
+            if (Number.isFinite(patch.light)) node.light = clamp(Math.round(patch.light), 0, 255);
+            if (typeof patch.penDown === "boolean") node.penDown = patch.penDown;
+            if (patch.penToggle) node.penDown = !node.penDown;
+
+            if (patch.colorShift) {
+                node.colorIndex = (node.colorIndex + 1) % RAINBOW.length;
+                node.color = RAINBOW[node.colorIndex];
+            }
+
+            if (patch.move === "up") {
+                node.velocityX = 0;
+                node.velocityY = -1;
+            }
+            if (patch.move === "down") {
+                node.velocityX = 0;
+                node.velocityY = 1;
+            }
+            if (patch.move === "left") {
+                node.velocityX = -1;
+                node.velocityY = 0;
+            }
+            if (patch.move === "right") {
+                node.velocityX = 1;
+                node.velocityY = 0;
+            }
+            if (patch.stop) {
+                node.velocityX = 0;
+                node.velocityY = 0;
+            }
+            if (patch.penGrow) {
+                node.penScale = clamp(node.penScale + 0.2, 0.5, 4);
+            }
+            if (patch.penShrink) {
+                node.penScale = clamp(node.penScale - 0.2, 0.5, 4);
+            }
+            if (patch.penReset) {
+                node.penScale = 1;
+            }
+        }
+
+        function decodeStrictHubField(key, numericValue) {
+            if (!Number.isFinite(numericValue)) return null;
+            if (key === "x" && numericValue >= -4096 && numericValue <= 4096) return { ax: numericValue };
+            if (key === "y" && numericValue >= -4096 && numericValue <= 4096) return { ay: numericValue };
+            if (key === "l" && numericValue >= 0 && numericValue <= 255) return { light: numericValue };
+            if (key === "a") {
+                if (numericValue === 1) return { penToggle: true };
+                if (numericValue === 2) return { colorShift: true };
+                if (numericValue === 3) return { penShrink: true };
+                if (numericValue === 0) return { penDown: false };
+            }
+            if (key === "g") {
+                if (numericValue === 1) return { move: "down" };
+                if (numericValue === 2) return { move: "up" };
+                if (numericValue === 3) return { move: "left" };
+                if (numericValue === 4) return { move: "right" };
+                if (numericValue === 5) return { stop: true };
+                if (numericValue === 6) return { penReset: true };
+                if (numericValue === 7) return { colorShift: true };
+                if (numericValue === 8) return { penGrow: true };
+                if (numericValue === 10) return {};
+            }
+            return null;
+        }
+
+        function parseHubLine(rawLine) {
+            const line = (rawLine || "").trim();
+            if (!line) return null;
+
+            const match = /^([A-Za-z0-9-]+)\|([a-z])=(-?\d+)$/.exec(line);
+            if (!match) return null;
+
+            const id = match[1];
+            const key = match[2];
+            const numericValue = Number(match[3]);
+
+            if (!isValidMicrobitSerial(id) || !isAllowedDevice(id)) return null;
+
+            const patch = decodeStrictHubField(key, numericValue);
+            if (!patch) return null;
+
+            return { id, patch };
+        }
+
+        function handleHubLine(rawLine) {
+            const message = parseHubLine(rawLine);
+            if (!message) return;
+            applyNodeUpdate(message.id, message.patch);
+        }
+
+        class LineBreakTransformer {
+            constructor() {
+                this.buffer = "";
+            }
+
+            transform(chunk, controller) {
+                this.buffer += chunk;
+                const lines = this.buffer.split(/\r?\n/);
+                this.buffer = lines.pop();
+                lines.forEach(line => controller.enqueue(line));
+            }
+
+            flush(controller) {
+                if (this.buffer) controller.enqueue(this.buffer);
+            }
+        }
+
+        async function readHubLoop() {
+            try {
+                while (state.serial.keepReading && state.serial.reader) {
+                    const { value, done } = await state.serial.reader.read();
+                    if (done) break;
+                    if (typeof value === "string") handleHubLine(value);
+                }
+            } catch (error) {
+                await disconnectHub();
+            } finally {
+                if (state.serial.keepReading) await disconnectHub();
+            }
+        }
+
+        async function connectHub() {
+            if (!("serial" in navigator)) return;
+
+            try {
+                const availablePorts = await navigator.serial.getPorts();
+                const knownMicrobitPort = availablePorts.find(port => {
+                    const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+                    return info && info.usbVendorId === 0x0D28;
+                });
+
+                state.serial.port = knownMicrobitPort || await navigator.serial.requestPort({ filters: MICROBIT_USB_FILTERS });
+                await state.serial.port.open({ baudRate: 115200 });
+                const decoder = new TextDecoderStream();
+                state.serial.inputDone = state.serial.port.readable.pipeTo(decoder.writable);
+                state.serial.reader = decoder.readable
+                    .pipeThrough(new TransformStream(new LineBreakTransformer()))
+                    .getReader();
+                state.serial.keepReading = true;
+                document.getElementById("connectBtn").textContent = "Disconnect Hub";
+                readHubLoop();
+            } catch (error) {
+                await disconnectHub();
+            }
+        }
+
+        async function disconnectHub() {
+            state.serial.keepReading = false;
+
+            if (state.serial.reader) {
+                try { await state.serial.reader.cancel(); } catch (error) {}
+                try { state.serial.reader.releaseLock(); } catch (error) {}
+                state.serial.reader = null;
+            }
+
+            if (state.serial.inputDone) {
+                try { await state.serial.inputDone; } catch (error) {}
+                state.serial.inputDone = null;
+            }
+
+            if (state.serial.port) {
+                try { await state.serial.port.close(); } catch (error) {}
+                state.serial.port = null;
+            }
+
+            document.getElementById("connectBtn").textContent = "Connect Hub";
+        }
+
+        document.getElementById("connectBtn").addEventListener("click", async () => {
+            if (state.serial.port) {
+                await disconnectHub();
+            } else {
+                await connectHub();
+            }
+        });
+
+        document.getElementById("saveBtn").addEventListener("click", saveDrawing);
+        document.getElementById("clearBtn").addEventListener("click", clearDrawing);
+
+        if ("serial" in navigator) {
+            navigator.serial.addEventListener("disconnect", async event => {
+                if (state.serial.port && event.target === state.serial.port) {
+                    await disconnectHub();
+                }
+            });
+        }
+
+        async function initializeRegistry() {
+            const fileRegistry = await loadRegistryFromFile();
+            state.registry = { ...fileRegistry, ...state.registry };
+            saveRegistry();
+            pruneNodes();
+        }
+
+        state.registry = loadRegistry();
+        pruneNodes();
+        resizeCanvases();
+        drawFrame();
+        initializeRegistry();
+        window.addEventListener("resize", resizeCanvases);
+    </script>
+</body>
+</html>

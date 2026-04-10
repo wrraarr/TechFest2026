@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Code Monitor · Luddy TechFest 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #221715;
+            --paper: #fbf5ea;
+            --panel: rgba(255, 252, 246, 0.92);
+            --line: rgba(34, 23, 21, 0.12);
+            --accent: #990000;
+            --teal: #2f6d66;
+            --gold: #c89a35;
+            --shadow: rgba(48, 30, 22, 0.12);
+            /* terminal colours */
+            --term-bg: #101010;
+            --term-green: #4dff91;
+            --term-yellow: #ffd84d;
+            --term-red: #ff6b6b;
+            --term-muted: rgba(255, 255, 255, 0.28);
+            /* rounding */
+            --radius-panel: 10px;
+            --radius-card: 8px;
+            --radius-slot: 6px;
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            font-family: "IBM Plex Sans", sans-serif;
+            background:
+                radial-gradient(circle at top left, rgba(153,0,0,0.12), transparent 24%),
+                radial-gradient(circle at 82% 10%, rgba(200,154,53,0.14), transparent 24%),
+                linear-gradient(145deg, #fdf8ef 0%, var(--paper) 52%, #f2e6d3 100%);
+            min-height: 100vh;
+        }
+
+        a { color: inherit; text-decoration: none; }
+        button, input { font: inherit; }
+
+        .page {
+            width: min(1180px, calc(100vw - 32px));
+            margin: 0 auto;
+            padding: 24px 0 48px;
+        }
+
+        /* ---- topbar ---- */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .brand-lockup-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .brand-lockup-link img { display: block; height: 48px; width: auto; }
+        .brand-lockup-link .brand-sub {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(34,23,21,0.6);
+        }
+
+        .nav { display: flex; flex-wrap: wrap; gap: 10px; }
+        .nav a {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.7);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+        .nav a:hover { background: rgba(255,255,255,0.95); }
+
+        /* ---- shared panel ---- */
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: var(--radius-panel);
+            background: var(--panel);
+            box-shadow: 0 20px 56px var(--shadow);
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--accent);
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+        }
+
+        h1, h2, h3 { font-family: "Newsreader", serif; margin: 0; }
+        p { margin: 0; }
+
+        /* ---- hero ---- */
+        .hero {
+            padding: 28px 32px;
+            margin-bottom: 18px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .hero h1 {
+            font-size: clamp(1.9rem, 4vw, 3rem);
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+            max-width: 18ch;
+        }
+
+        .hero-copy {
+            margin-top: 12px;
+            max-width: 52ch;
+            color: rgba(34,23,21,0.72);
+            line-height: 1.6;
+            font-size: 0.97rem;
+        }
+
+        .connect-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.78);
+            font-weight: 700;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: background 100ms, opacity 100ms;
+        }
+        .btn:hover { background: rgba(255,255,255,1); }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .btn-primary:hover { background: #7a0000; border-color: #7a0000; }
+        .btn-sm {
+            padding: 7px 14px;
+            font-size: 0.84rem;
+        }
+
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 13px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.6);
+            font-size: 0.84rem;
+            font-weight: 700;
+            font-family: "IBM Plex Mono", monospace;
+        }
+        .status-chip::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(34,23,21,0.24);
+        }
+        .status-chip.connected { color: var(--teal); border-color: rgba(47,109,102,0.3); }
+        .status-chip.connected::before { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+        .status-chip.error { color: #c0392b; }
+        .status-chip.error::before { background: #c0392b; }
+
+        /* serial support warning */
+        .no-serial-notice {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 14px;
+            border-radius: var(--radius-card);
+            background: rgba(153,0,0,0.07);
+            border: 1px solid rgba(153,0,0,0.15);
+            color: var(--accent);
+            font-size: 0.88rem;
+            line-height: 1.5;
+        }
+
+        /* ---- last event bar ---- */
+        .last-event-bar {
+            padding: 20px 28px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .last-event-bar .le-label {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: rgba(34,23,21,0.5);
+            white-space: nowrap;
+        }
+
+        .last-code-display {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: clamp(2rem, 6vw, 3.8rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--accent);
+            line-height: 1;
+            min-width: 6ch;
+        }
+        .last-code-display.flash {
+            animation: flashCode 0.4s ease-out;
+        }
+        @keyframes flashCode {
+            0% { color: var(--teal); }
+            100% { color: var(--accent); }
+        }
+
+        .le-detail {
+            display: grid;
+            gap: 3px;
+        }
+        .le-name {
+            font-family: "Newsreader", serif;
+            font-size: 1.18rem;
+            letter-spacing: -0.02em;
+            color: var(--ink);
+        }
+        .le-device {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.78rem;
+            color: rgba(34,23,21,0.55);
+            letter-spacing: 0.06em;
+        }
+
+        .le-spacer { flex: 1; }
+
+        .event-total {
+            text-align: right;
+        }
+        .event-total .total-num {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--ink);
+            line-height: 1;
+        }
+        .event-total .total-label {
+            font-size: 0.78rem;
+            color: rgba(34,23,21,0.5);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        /* ---- monitor grid ---- */
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 320px;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        /* ---- feed panel ---- */
+        .feed-panel {
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px 14px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .feed-header .eyebrow { margin: 0; }
+
+        .feed-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .feed-scroll {
+            flex: 1;
+            min-height: 380px;
+            max-height: 520px;
+            overflow-y: auto;
+            background: var(--term-bg);
+            border-radius: 0 0 var(--radius-panel) var(--radius-panel);
+            padding: 12px 0;
+            scroll-behavior: smooth;
+        }
+
+        .feed-empty {
+            padding: 32px 20px;
+            text-align: center;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.88rem;
+            color: var(--term-muted);
+        }
+
+        .feed-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 1fr;
+            gap: 0 16px;
+            padding: 5px 20px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.84rem;
+            line-height: 1.4;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feed-row:last-child { border-bottom: none; }
+
+        .fr-code {
+            color: var(--term-yellow);
+            font-weight: 700;
+        }
+        .fr-name { color: var(--term-green); }
+        .fr-device { color: var(--term-muted); font-size: 0.76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* ---- stats panel ---- */
+        .stats-panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .stats-panel h3 {
+            font-size: 1.1rem;
+            letter-spacing: -0.02em;
+            margin-bottom: 14px;
+        }
+
+        .stats-list {
+            display: grid;
+            gap: 6px;
+            flex: 1;
+        }
+
+        .stat-row {
+            display: grid;
+            grid-template-columns: 72px 1fr 40px;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 10px;
+            border-radius: var(--radius-card);
+            background: rgba(34,23,21,0.03);
+            border: 1px solid transparent;
+            transition: border-color 200ms;
+        }
+        .stat-row.active { border-color: rgba(47,109,102,0.25); background: rgba(47,109,102,0.06); }
+
+        .stat-code {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .stat-bar-wrap {
+            height: 6px;
+            background: rgba(34,23,21,0.08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .stat-bar {
+            height: 100%;
+            border-radius: 3px;
+            background: var(--teal);
+            width: 0%;
+            transition: width 300ms ease;
+        }
+        .stat-count {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-align: right;
+            color: var(--ink);
+        }
+
+        .stats-empty {
+            padding: 24px 12px;
+            text-align: center;
+            color: rgba(34,23,21,0.4);
+            font-size: 0.9rem;
+        }
+
+        /* ---- devices panel ---- */
+        .devices-panel {
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+
+        .devices-panel h3 {
+            font-size: 1.1rem;
+            letter-spacing: -0.02em;
+            margin-bottom: 14px;
+        }
+
+        .device-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .device-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 13px;
+            border-radius: var(--radius-card);
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.7);
+            font-size: 0.86rem;
+        }
+        .device-chip::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(34,23,21,0.18);
+        }
+        .device-chip.active::before { background: var(--teal); box-shadow: 0 0 5px var(--teal); }
+
+        .device-label { font-weight: 700; }
+        .device-serial {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.74rem;
+            color: rgba(34,23,21,0.5);
+        }
+        .device-last {
+            font-size: 0.74rem;
+            color: rgba(34,23,21,0.45);
+            font-family: "IBM Plex Mono", monospace;
+        }
+
+        .device-empty {
+            color: rgba(34,23,21,0.4);
+            font-size: 0.9rem;
+        }
+
+        /* ---- ref table ---- */
+        .ref-panel {
+            padding: 24px;
+        }
+
+        .ref-panel h2 {
+            font-size: 1.4rem;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+        }
+
+        .table-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 580px;
+        }
+
+        th, td {
+            padding: 10px 13px;
+            border-bottom: 1px solid rgba(34,23,21,0.09);
+            text-align: left;
+            font-size: 0.92rem;
+            vertical-align: top;
+        }
+        th {
+            font-size: 0.78rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: rgba(34,23,21,0.55);
+        }
+        tr.active-row td { background: rgba(47,109,102,0.07); }
+
+        code {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.88em;
+            background: rgba(34,23,21,0.06);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+
+        /* ---- responsive ---- */
+        @media (max-width: 860px) {
+            .topbar { flex-direction: column; align-items: flex-start; }
+            .hero { grid-template-columns: 1fr; }
+            .monitor-grid { grid-template-columns: 1fr; }
+            .last-event-bar { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <a class="brand-lockup-link" href="index.html" aria-label="Luddy TechFest home">
+                <img src="luddy_lockup_WEB_h1.png" alt="Luddy School of Informatics, Computing, and Engineering">
+                <span class="brand-sub">TechFest 2026 · Live Code Monitor</span>
+            </a>
+            <nav class="nav" aria-label="Primary">
+                <a href="index.html">Home</a>
+                <a href="string_ensemble_baton_nodes.html">Orchestra</a>
+                <a href="microbit_luddy_characters.html">Characters</a>
+                <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+                <a href="control_worksheet.html">Worksheet</a>
+                <a href="microbit_code_monitor.html" style="color: var(--accent);">Monitor</a>
+            </nav>
+        </header>
+
+        <!-- hero -->
+        <section class="panel hero">
+            <div>
+                <p class="eyebrow">Facilitator Tool · Live Code Monitor</p>
+                <h1>See every micro:bit move as it happens.</h1>
+                <p class="hero-copy">Connect the hub micro:bit and this page shows you every code the room is broadcasting — in real time. Great for debugging, demonstrating the protocol to students, or just watching the room come alive.</p>
+                <div class="connect-row">
+                    <button class="btn btn-primary" id="connectBtn">Connect Hub</button>
+                    <button class="btn btn-sm" id="clearBtn">Clear Feed</button>
+                    <button class="btn btn-sm" id="pauseBtn">Pause</button>
+                    <span class="status-chip" id="statusChip">Not connected</span>
+                </div>
+                <p class="no-serial-notice" id="noSerialNotice">
+                    Web Serial is not supported in this browser. Use <strong>Chrome</strong> or <strong>Edge</strong> with the hub micro:bit plugged in via USB.
+                </p>
+            </div>
+            <div style="display:grid; gap:12px; min-width:200px; align-content:start;">
+                <div style="padding:16px 18px; border-radius:var(--radius-card); border:1px dashed rgba(34,23,21,0.18); background:rgba(255,255,255,0.6);">
+                    <strong style="font-size:0.76rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent);">How to use</strong>
+                    <p style="margin-top:8px; font-size:0.88rem; line-height:1.55; color:rgba(34,23,21,0.7);">Plug in the hub micro:bit, click <em>Connect Hub</em>, then pick the device from the browser prompt. Hand a satellite micro:bit to a student and watch the codes roll in.</p>
+                </div>
+                <div style="padding:16px 18px; border-radius:var(--radius-card); border:1px dashed rgba(34,23,21,0.18); background:rgba(255,255,255,0.6);">
+                    <strong style="font-size:0.76rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal);">All devices shown</strong>
+                    <p style="margin-top:8px; font-size:0.88rem; line-height:1.55; color:rgba(34,23,21,0.7);">Unlike the experience pages, this monitor shows codes from <em>all</em> micro:bits — registered or not. Friendly names come from the registry on the Home page.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- last event bar -->
+        <section class="panel last-event-bar" id="lastEventBar">
+            <div class="le-label">Last code</div>
+            <div class="last-code-display" id="lastCode">—</div>
+            <div class="le-detail">
+                <div class="le-name" id="lastCodeName">Waiting for connection…</div>
+                <div class="le-device" id="lastDevice"></div>
+            </div>
+            <div class="le-spacer"></div>
+            <div class="event-total">
+                <div class="total-num" id="totalCount">0</div>
+                <div class="total-label">events total</div>
+            </div>
+        </section>
+
+        <!-- monitor grid: feed + stats -->
+        <div class="monitor-grid">
+            <!-- live feed -->
+            <div class="panel feed-panel">
+                <div class="feed-header">
+                    <p class="eyebrow" style="margin:0;">Live Feed</p>
+                    <div class="feed-controls">
+                        <span id="feedCountLabel" style="font-family:'IBM Plex Mono',monospace; font-size:0.78rem; color:rgba(34,23,21,0.45);">0 events</span>
+                    </div>
+                </div>
+                <div class="feed-scroll" id="feedScroll">
+                    <div class="feed-empty" id="feedEmpty">Connect the hub to see codes stream in…</div>
+                </div>
+            </div>
+
+            <!-- stats -->
+            <div class="panel stats-panel">
+                <p class="eyebrow">Event Counts</p>
+                <h3>Codes this session</h3>
+                <div class="stats-list" id="statsList">
+                    <div class="stats-empty" id="statsEmpty">No data yet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- active devices -->
+        <section class="panel devices-panel">
+            <p class="eyebrow">Active Devices</p>
+            <h3>micro:bits seen this session</h3>
+            <div class="device-grid" id="deviceGrid">
+                <span class="device-empty">No devices seen yet</span>
+            </div>
+        </section>
+
+        <!-- code reference -->
+        <section class="ref-panel panel">
+            <p class="eyebrow">Code Reference</p>
+            <h2>All known codes</h2>
+            <div class="table-wrap">
+                <table id="refTable">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Event name</th>
+                            <th>Type</th>
+                            <th>Count this session</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="ref-a1"><td><code>a=1</code></td><td>Button A</td><td>Action</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-a2"><td><code>a=2</code></td><td>Button B</td><td>Action</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-a3"><td><code>a=3</code></td><td>Button A+B</td><td>Action</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-a4"><td><code>a=4</code></td><td>Logo press</td><td>Action</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g1"><td><code>g=1</code></td><td>Logo up (tilt back)</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g2"><td><code>g=2</code></td><td>Logo down (tilt forward)</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g3"><td><code>g=3</code></td><td>Tilt left</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g4"><td><code>g=4</code></td><td>Tilt right</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g5"><td><code>g=5</code></td><td>Screen up (face up)</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g6"><td><code>g=6</code></td><td>Screen down (face down)</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g7"><td><code>g=7</code></td><td>Free fall</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g8"><td><code>g=8</code></td><td>Shake</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g9"><td><code>g=9</code></td><td>3G force</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g10"><td><code>g=10</code></td><td>6G force</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                        <tr id="ref-g11"><td><code>g=11</code></td><td>8G force</td><td>Gesture</td><td class="ref-count">0</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        /* ---- constants ---- */
+        const MICROBIT_USB_FILTERS = [
+            { usbVendorId: 0x0D28, usbProductId: 0x0204 }
+        ];
+
+        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+
+        const CODE_NAMES = {
+            "a=1": "Button A",
+            "a=2": "Button B",
+            "a=3": "Button A+B",
+            "a=4": "Logo press",
+            "g=1": "Logo up (tilt back)",
+            "g=2": "Logo down (tilt forward)",
+            "g=3": "Tilt left",
+            "g=4": "Tilt right",
+            "g=5": "Screen up (face up)",
+            "g=6": "Screen down (face down)",
+            "g=7": "Free fall",
+            "g=8": "Shake",
+            "g=9": "3G force",
+            "g=10": "6G force",
+            "g=11": "8G force",
+        };
+
+        const REF_ROW_IDS = {
+            "a=1": "ref-a1", "a=2": "ref-a2", "a=3": "ref-a3", "a=4": "ref-a4",
+            "g=1": "ref-g1", "g=2": "ref-g2", "g=3": "ref-g3", "g=4": "ref-g4",
+            "g=5": "ref-g5", "g=6": "ref-g6", "g=7": "ref-g7", "g=8": "ref-g8",
+            "g=9": "ref-g9", "g=10": "ref-g10", "g=11": "ref-g11",
+        };
+
+        /* ---- state ---- */
+        const state = {
+            serial: { port: null, reader: null, inputDone: null, keepReading: false },
+            registry: {},
+            counts: {},       // code => count
+            devices: {},      // serialId => { label, lastCode, lastTime }
+            totalEvents: 0,
+            paused: false,
+            feedRows: 0,
+            maxFeedRows: 300,
+        };
+
+        /* ---- registry ---- */
+        function loadRegistry() {
+            try {
+                const raw = localStorage.getItem(REGISTRY_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                if (typeof parsed !== "object" || parsed === null) return {};
+                return Object.fromEntries(
+                    Object.entries(parsed)
+                        .filter(([k, v]) => typeof k === "string" && typeof v === "string")
+                );
+            } catch { return {}; }
+        }
+
+        function getDeviceLabel(id) {
+            return state.registry[id] || null;
+        }
+
+        /* ---- serial ---- */
+        class LineBreakTransformer {
+            constructor() { this.buffer = ""; }
+            transform(chunk, controller) {
+                this.buffer += chunk;
+                const lines = this.buffer.split(/\r?\n/);
+                this.buffer = lines.pop();
+                lines.forEach(line => controller.enqueue(line));
+            }
+            flush(controller) { if (this.buffer) controller.enqueue(this.buffer); }
+        }
+
+        function parseRawLine(rawLine) {
+            const line = (rawLine || "").trim();
+            if (!line) return null;
+            const match = /^([A-Za-z0-9-]+)\|([a-z])=(-?\d+)$/.exec(line);
+            if (!match) return null;
+            const id = match[1];
+            const key = match[2];
+            const num = Number(match[3]);
+            const code = `${key}=${num}`;
+            return { id, code };
+        }
+
+        function handleLine(rawLine) {
+            const parsed = parseRawLine(rawLine);
+            if (!parsed) return;
+            const { id, code } = parsed;
+
+            state.totalEvents++;
+            state.counts[code] = (state.counts[code] || 0) + 1;
+
+            const label = getDeviceLabel(id);
+            const displayId = label || id;
+            const codeName = CODE_NAMES[code] || code;
+
+            // update device tracker
+            if (!state.devices[id]) {
+                state.devices[id] = { label, lastCode: code, lastTime: Date.now() };
+                renderDevices();
+            } else {
+                state.devices[id].lastCode = code;
+                state.devices[id].lastTime = Date.now();
+            }
+
+            updateLastEvent(code, codeName, displayId, id);
+            updateStats();
+            updateRefTable(code);
+
+            if (!state.paused) {
+                appendFeedRow(code, codeName, displayId);
+            }
+
+            // pulse the active device chip
+            const chipEl = document.getElementById(`device-chip-${id}`);
+            if (chipEl) {
+                chipEl.classList.add("active");
+                clearTimeout(chipEl._pulseTimer);
+                chipEl._pulseTimer = setTimeout(() => chipEl.classList.remove("active"), 1200);
+            }
+        }
+
+        /* ---- display updates ---- */
+        function updateLastEvent(code, name, displayId, rawId) {
+            const codeEl = document.getElementById("lastCode");
+            const nameEl = document.getElementById("lastCodeName");
+            const deviceEl = document.getElementById("lastDevice");
+            const countEl = document.getElementById("totalCount");
+
+            codeEl.textContent = code;
+            codeEl.classList.remove("flash");
+            void codeEl.offsetWidth; // reflow
+            codeEl.classList.add("flash");
+
+            nameEl.textContent = name;
+            deviceEl.textContent = rawId !== displayId ? `${displayId} · ${rawId}` : rawId;
+            countEl.textContent = state.totalEvents.toLocaleString();
+        }
+
+        function appendFeedRow(code, name, displayId) {
+            const feed = document.getElementById("feedScroll");
+            const empty = document.getElementById("feedEmpty");
+            if (empty) empty.remove();
+
+            const row = document.createElement("div");
+            row.className = "feed-row";
+            row.innerHTML = `<span class="fr-code">${escHtml(code)}</span><span class="fr-name">${escHtml(name)}</span><span class="fr-device">${escHtml(displayId)}</span>`;
+            feed.insertBefore(row, feed.firstChild);
+
+            state.feedRows++;
+            const countLabel = document.getElementById("feedCountLabel");
+            if (countLabel) countLabel.textContent = `${state.feedRows} events`;
+
+            // trim old rows
+            while (feed.children.length > state.maxFeedRows) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        function updateStats() {
+            const list = document.getElementById("statsList");
+            const empty = document.getElementById("statsEmpty");
+            if (empty) empty.remove();
+
+            const maxCount = Math.max(...Object.values(state.counts), 1);
+            const sorted = Object.entries(state.counts).sort((a, b) => b[1] - a[1]);
+
+            // Rebuild or update stat rows
+            sorted.forEach(([code, count]) => {
+                let row = document.getElementById(`stat-${code.replace("=", "-")}`);
+                if (!row) {
+                    row = document.createElement("div");
+                    row.className = "stat-row";
+                    row.id = `stat-${code.replace("=", "-")}`;
+                    row.innerHTML = `<span class="stat-code">${escHtml(code)}</span><div class="stat-bar-wrap"><div class="stat-bar" style="width:0%"></div></div><span class="stat-count">0</span>`;
+                    list.appendChild(row);
+                }
+                row.querySelector(".stat-count").textContent = count;
+                row.querySelector(".stat-bar").style.width = `${Math.round((count / maxCount) * 100)}%`;
+                row.classList.add("active");
+                clearTimeout(row._timer);
+                row._timer = setTimeout(() => row.classList.remove("active"), 800);
+            });
+
+            // Re-sort children by count
+            const rows = Array.from(list.querySelectorAll(".stat-row"));
+            rows.sort((a, b) => parseInt(b.querySelector(".stat-count").textContent) - parseInt(a.querySelector(".stat-count").textContent));
+            rows.forEach(r => list.appendChild(r));
+        }
+
+        function updateRefTable(code) {
+            const rowId = REF_ROW_IDS[code];
+            if (!rowId) return;
+            const row = document.getElementById(rowId);
+            if (!row) return;
+            const countCell = row.querySelector(".ref-count");
+            if (countCell) countCell.textContent = state.counts[code] || 0;
+            row.classList.add("active-row");
+            clearTimeout(row._timer);
+            row._timer = setTimeout(() => row.classList.remove("active-row"), 600);
+        }
+
+        function renderDevices() {
+            const grid = document.getElementById("deviceGrid");
+            grid.innerHTML = "";
+            Object.entries(state.devices).forEach(([id, info]) => {
+                const label = info.label || null;
+                const chip = document.createElement("div");
+                chip.className = "device-chip";
+                chip.id = `device-chip-${id}`;
+                chip.innerHTML = `<span class="device-label">${escHtml(label || "Unknown")}</span><span class="device-serial">${escHtml(id)}</span>`;
+                grid.appendChild(chip);
+            });
+        }
+
+        /* ---- serial connect/disconnect ---- */
+        async function readHubLoop() {
+            try {
+                while (state.serial.keepReading && state.serial.reader) {
+                    const { value, done } = await state.serial.reader.read();
+                    if (done) break;
+                    if (typeof value === "string") handleLine(value);
+                }
+            } catch (err) {
+                await disconnectHub();
+            } finally {
+                if (state.serial.keepReading) await disconnectHub();
+            }
+        }
+
+        async function connectHub() {
+            if (!("serial" in navigator)) return;
+            setStatus("connecting");
+            try {
+                const available = await navigator.serial.getPorts();
+                const known = available.find(p => {
+                    const info = typeof p.getInfo === "function" ? p.getInfo() : {};
+                    return info && info.usbVendorId === 0x0D28;
+                });
+                state.serial.port = known || await navigator.serial.requestPort({ filters: MICROBIT_USB_FILTERS });
+                await state.serial.port.open({ baudRate: 115200 });
+                const decoder = new TextDecoderStream();
+                state.serial.inputDone = state.serial.port.readable.pipeTo(decoder.writable);
+                state.serial.reader = decoder.readable
+                    .pipeThrough(new TransformStream(new LineBreakTransformer()))
+                    .getReader();
+                state.serial.keepReading = true;
+                setStatus("connected");
+                document.getElementById("connectBtn").textContent = "Disconnect Hub";
+                readHubLoop();
+            } catch (err) {
+                setStatus("error");
+                await disconnectHub();
+            }
+        }
+
+        async function disconnectHub() {
+            state.serial.keepReading = false;
+            if (state.serial.reader) {
+                try { await state.serial.reader.cancel(); } catch {}
+                try { state.serial.reader.releaseLock(); } catch {}
+                state.serial.reader = null;
+            }
+            if (state.serial.inputDone) {
+                try { await state.serial.inputDone; } catch {}
+                state.serial.inputDone = null;
+            }
+            if (state.serial.port) {
+                try { await state.serial.port.close(); } catch {}
+                state.serial.port = null;
+            }
+            setStatus("disconnected");
+            document.getElementById("connectBtn").textContent = "Connect Hub";
+        }
+
+        function setStatus(s) {
+            const chip = document.getElementById("statusChip");
+            chip.className = "status-chip";
+            if (s === "connected") {
+                chip.textContent = "Connected";
+                chip.classList.add("connected");
+            } else if (s === "connecting") {
+                chip.textContent = "Connecting…";
+            } else if (s === "error") {
+                chip.textContent = "Connection error";
+                chip.classList.add("error");
+            } else {
+                chip.textContent = "Not connected";
+            }
+        }
+
+        /* ---- button handlers ---- */
+        document.getElementById("connectBtn").addEventListener("click", async () => {
+            if (state.serial.port) {
+                await disconnectHub();
+            } else {
+                await connectHub();
+            }
+        });
+
+        document.getElementById("clearBtn").addEventListener("click", () => {
+            const feed = document.getElementById("feedScroll");
+            feed.innerHTML = `<div class="feed-empty" id="feedEmpty">Feed cleared. Waiting for new codes…</div>`;
+            state.feedRows = 0;
+            const cl = document.getElementById("feedCountLabel");
+            if (cl) cl.textContent = "0 events";
+        });
+
+        document.getElementById("pauseBtn").addEventListener("click", () => {
+            state.paused = !state.paused;
+            document.getElementById("pauseBtn").textContent = state.paused ? "Resume" : "Pause";
+        });
+
+        /* ---- serial support check ---- */
+        if (!("serial" in navigator)) {
+            document.getElementById("noSerialNotice").style.display = "block";
+            document.getElementById("connectBtn").disabled = true;
+            document.getElementById("connectBtn").style.opacity = "0.4";
+        }
+
+        if ("serial" in navigator) {
+            navigator.serial.addEventListener("disconnect", async event => {
+                if (state.serial.port && event.target === state.serial.port) {
+                    await disconnectHub();
+                }
+            });
+        }
+
+        /* ---- util ---- */
+        function escHtml(s) {
+            return String(s)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        /* ---- init ---- */
+        state.registry = loadRegistry();
+    </script>
+</body>
+</html>

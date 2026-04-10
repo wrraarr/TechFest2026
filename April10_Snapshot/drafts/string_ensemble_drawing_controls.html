@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luddy Orchestra: String Ensemble Controller</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="sample_maps.js"></script>
+    <script src="orchestra_dash.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background-color: #fafafa;
+            color: #1a1a1a;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            overflow: hidden;
+            user-select: none;
+        }
+        #overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(250, 250, 250, 0.97);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        #overlay h1 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+        #overlay p {
+            font-size: 0.92rem;
+            color: #666;
+            margin: 0 0 14px 0;
+            max-width: 540px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        #startBtn {
+            padding: 14px 36px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            font-family: 'Inter', sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        #topNav {
+            position: absolute;
+            top: 18px;
+            left: 18px;
+            z-index: 25;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        #topNav a {
+            color: #1a1a1a;
+            text-decoration: none;
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid #ddd;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+        svg { width: 100vw; height: 100vh; display: block; }
+        #topbar {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+        .toolbar button {
+            appearance: none;
+            border: 1px solid #ddd;
+            border-radius: 999px;
+            padding: 9px 14px;
+            background: #fff;
+            color: #111;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .toolbar button:hover { background: #f4f4f5; }
+        .hud {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: #555;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #e5e5e5;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            max-width: 480px;
+        }
+        .staff-line { stroke: #ddd; stroke-width: 1px; }
+        .staff-line.middle-c { stroke: #bbb; stroke-dasharray: 5 4; stroke-width: 1px; }
+        @font-face {
+            font-family: 'Bravura';
+            src: url('https://cdn.jsdelivr.net/gh/steinbergmedia/bravura/redist/woff/Bravura.woff') format('woff');
+            font-display: swap;
+        }
+        .clef-symbol {
+            font-family: 'Bravura', serif;
+            fill: #ccc;
+        }
+        .clef-label {
+            fill: #aaa;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            opacity: 0.8;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .chord-watermark {
+            fill: #ccc;
+            opacity: 0.52;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            letter-spacing: -0.04em;
+        }
+        .node circle {
+            stroke: #fff;
+            stroke-width: 2.5px;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.08));
+        }
+        .node text.label {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            fill: #fff;
+            pointer-events: none;
+            text-anchor: middle;
+            transform: translateY(-4px);
+            font-size: 12px;
+            letter-spacing: 0.02em;
+        }
+        .node text.note {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            fill: #000;
+            pointer-events: none;
+            text-anchor: middle;
+            transform: translateY(14px);
+            font-size: 10px;
+        }
+        .baton  { fill: #1a1a1a; }
+        .violin { fill: #5b8def; }
+        .viola  { fill: #a07cd6; }
+        .cello  { fill: #4dab8c; }
+        .bass   { fill: #d4845a; }
+        .range-line {
+            stroke: rgba(0, 0, 0, 0.03);
+            stroke-width: 36px;
+            stroke-linecap: round;
+        }
+    </style>
+</head>
+<body>
+<nav id="topNav" aria-label="Primary">
+    <a href="index.html">Home</a>
+    <a href="string_ensemble_baton_nodes.html">Orchestra</a>
+    <a href="microbit_luddy_characters.html">Characters</a>
+    <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+    <a href="string_ensemble.html">Master Score</a>
+</nav>
+
+<div id="overlay">
+    <h1>String Ensemble Controller</h1>
+    <p>Uses the same registered micro:bit labels as the drawing canvas. Player labels: C1, C2, A1, A2, B1, V1, V2, V3, V4. Baton label: B2.</p>
+    <button id="startBtn">Initialize Orchestra</button>
+</div>
+
+<div id="topbar">
+    <div class="toolbar">
+        <button id="connectBtn" type="button">Connect Hub</button>
+        <button id="simulateBtn" type="button">Start Demo</button>
+    </div>
+    <div class="hud" id="hud-state">KEY: C Major | CHORD: I | BATON: B2</div>
+    <div class="hud" id="hud-help">Players: `up/down` chord tone, `left/right` scale step, `a=3` play note, `g=8` play nearby set, `g=6` change key. Baton B2: `a=3` full chord, `left/right` chord change, `up/down` key change, `g=8` mode shift.</div>
+</div>
+
+<svg id="viz"></svg>
+
+<script>
+    const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+    const REGISTRY_FILE_PATH = "registry.json";
+    const MICROBIT_USB_FILTERS = [
+        { usbVendorId: 0x0D28 }
+    ];
+    const CONTROLLER_LABELS = ["B1", "C2", "C1", "A2", "A1", "V4", "V3", "V2", "V1"];
+    const BATON_LABEL = "B2";
+    const DEMO_DEVICE_IDS = ["DEMO-B1", "DEMO-C2", "DEMO-C1", "DEMO-A2", "DEMO-A1", "DEMO-V4", "DEMO-V3", "DEMO-V2", "DEMO-V1", "DEMO-B2"];
+
+    let currentKey = "C";
+    let currentMode = "Major";
+    let currentChord = "I";
+
+    const keyRoots = {
+        "C": 0, "G": 7, "D": 2, "A": 9, "E": 4, "B": 11,
+        "F#": 6, "Db": 1, "Ab": 8, "Eb": 3, "Bb": 10, "F": 5
+    };
+    const keyOrder = ["C", "G", "D", "A", "E", "B", "F#", "Db", "Ab", "Eb", "Bb", "F"];
+    const chordOrder = ["I", "II", "III", "IV", "V", "V7", "VI", "VII"];
+    const chordIntervals = {
+        "Major": {
+            "I": [0, 4, 7],
+            "II": [2, 5, 9],
+            "III": [4, 7, 11],
+            "IV": [5, 9, 12],
+            "V": [7, 11, 14],
+            "V7": [7, 11, 14, 17],
+            "VI": [9, 12, 16],
+            "VII": [11, 14, 17]
+        },
+        "Minor": {
+            "I": [0, 3, 7],
+            "II": [2, 5, 8],
+            "III": [3, 7, 10],
+            "IV": [5, 8, 12],
+            "V": [7, 11, 14],
+            "V7": [7, 11, 14, 17],
+            "VI": [8, 12, 15],
+            "VII": [10, 14, 17]
+        }
+    };
+    const scaleIntervals = {
+        "Major": [0, 2, 4, 5, 7, 9, 11],
+        "Minor": [0, 2, 3, 5, 7, 8, 10]
+    };
+
+    let orchestra = new Orchestra("Strings");
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const SCORE_TOP = 80;
+    const SCORE_BOTTOM = height - 80;
+    const yScale = d3.scaleLinear().domain([20, 108]).range([SCORE_BOTTOM, SCORE_TOP]);
+    const xControls = 90;
+    const xScoreStart = 250;
+    const colSpacing = (width - xScoreStart - 50) / 10;
+
+    const NOTE_LETTER_INDEX = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+    const NOTE_NAMES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+    const NOTE_NAMES_FLAT = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+    const MIDDLE_C = 60;
+    const LINE_SPACING = 3;
+    const MIDDLE_C_Y = yScale(MIDDLE_C);
+    const STAFF_STEP_PX = Math.abs(yScale(MIDDLE_C + LINE_SPACING) - yScale(MIDDLE_C)) / 2;
+
+    const nodesData = [
+        { id: BATON_LABEL, type: "baton", label: BATON_LABEL, r: 35, isPlayer: false, x: xControls, y: SCORE_TOP + 60 },
+        { id: "B1", type: "bass", label: "B1", r: 35, isPlayer: true, col: 0, minMidi: 24, maxMidi: 72, startMidi: 36 },
+        { id: "C2", type: "cello", label: "C2", r: 30, isPlayer: true, col: 1, minMidi: 36, maxMidi: 84, startMidi: 43 },
+        { id: "C1", type: "cello", label: "C1", r: 30, isPlayer: true, col: 2, minMidi: 36, maxMidi: 84, startMidi: 48 },
+        { id: "A2", type: "viola", label: "A2", r: 28, isPlayer: true, col: 3, minMidi: 48, maxMidi: 96, startMidi: 55 },
+        { id: "A1", type: "viola", label: "A1", r: 28, isPlayer: true, col: 4, minMidi: 48, maxMidi: 96, startMidi: 60 },
+        { id: "V4", type: "violin", label: "V4", r: 25, isPlayer: true, col: 5, minMidi: 55, maxMidi: 103, startMidi: 67 },
+        { id: "V3", type: "violin", label: "V3", r: 25, isPlayer: true, col: 6, minMidi: 55, maxMidi: 103, startMidi: 72 },
+        { id: "V2", type: "violin", label: "V2", r: 25, isPlayer: true, col: 7, minMidi: 55, maxMidi: 103, startMidi: 76 },
+        { id: "V1", type: "violin", label: "V1", r: 25, isPlayer: true, col: 8, minMidi: 55, maxMidi: 103, startMidi: 79 }
+    ];
+
+    nodesData.forEach(d => {
+        if (d.isPlayer) d.x = xScoreStart + ((d.col + 1) * colSpacing);
+    });
+
+    const state = {
+        registry: {},
+        simulationRunning: false,
+        simulationTimer: null,
+        serial: {
+            port: null,
+            reader: null,
+            inputDone: null,
+            keepReading: false
+        }
+    };
+
+    const svg = d3.select("#viz").attr("viewBox", [0, 0, width, height]);
+    const scoreGroup = svg.append("g").attr("id", "score-background");
+    const chordBackdrop = scoreGroup.append("text")
+        .attr("class", "chord-watermark")
+        .attr("x", xScoreStart + 180)
+        .attr("y", SCORE_TOP + 120)
+        .attr("font-size", Math.min(width * 0.1, 100) + "px")
+        .text(`${currentKey} ${currentMode} ${currentChord}`);
+
+    function prefersFlatsForDisplay() {
+        return ["F", "Bb", "Eb", "Ab", "Db"].includes(currentKey) || currentMode === "Minor";
+    }
+
+    function midiToDisplayNote(midi, preferFlats = prefersFlatsForDisplay()) {
+        const pc = ((midi % 12) + 12) % 12;
+        const octave = Math.floor(midi / 12) - 1;
+        const names = preferFlats ? NOTE_NAMES_FLAT : NOTE_NAMES_SHARP;
+        return `${names[pc]}${octave}`;
+    }
+
+    function parseDisplayNote(noteName) {
+        const match = /^([A-G])([b#]?)(-?\d+)$/.exec(noteName);
+        if (!match) return { letter: "C", octave: 4 };
+        return { letter: match[1], octave: Number(match[3]) };
+    }
+
+    function noteNameToStaffStep(noteName) {
+        const { letter, octave } = parseDisplayNote(noteName);
+        return ((octave - 4) * 7) + NOTE_LETTER_INDEX[letter];
+    }
+
+    function staffStepToY(step) {
+        return MIDDLE_C_Y - (step * STAFF_STEP_PX);
+    }
+
+    function midiToStaffStep(midi, preferFlats = prefersFlatsForDisplay()) {
+        return noteNameToStaffStep(midiToDisplayNote(midi, preferFlats));
+    }
+
+    function midiToDisplayY(midi, preferFlats = prefersFlatsForDisplay()) {
+        return staffStepToY(midiToStaffStep(midi, preferFlats));
+    }
+
+    function generateStaff(name, offsetFromMiddleC) {
+        const midiLines = [];
+        for (let i = 0; i < 5; i++) midiLines.push(MIDDLE_C + offsetFromMiddleC + (i * LINE_SPACING));
+        return { name, midiLines };
+    }
+
+    const staves = [
+        generateStaff("Treble", 3),
+        generateStaff("Bass", -15)
+    ];
+
+    staves.forEach(staff => {
+        staff.midiLines.forEach(midi => {
+            scoreGroup.append("line")
+                .attr("class", "staff-line")
+                .attr("x1", xScoreStart - 50)
+                .attr("x2", width - 20)
+                .attr("y1", yScale(midi))
+                .attr("y2", yScale(midi));
+        });
+
+        const staffSpace = Math.abs(yScale(staff.midiLines[0]) - yScale(staff.midiLines[1]));
+        const clefFontSize = staffSpace * 4;
+        if (staff.name === "Treble") {
+            scoreGroup.append("text")
+                .attr("class", "clef-symbol")
+                .attr("x", xScoreStart - 48)
+                .attr("y", yScale(staff.midiLines[1]))
+                .attr("font-size", clefFontSize + "px")
+                .text("\uE050");
+        } else {
+            scoreGroup.append("text")
+                .attr("class", "clef-symbol")
+                .attr("x", xScoreStart - 48)
+                .attr("y", yScale(staff.midiLines[3]))
+                .attr("font-size", clefFontSize + "px")
+                .text("\uE062");
+        }
+    });
+
+    scoreGroup.append("line")
+        .attr("class", "staff-line middle-c")
+        .attr("x1", xScoreStart - 50)
+        .attr("x2", width - 20)
+        .attr("y1", yScale(MIDDLE_C))
+        .attr("y2", yScale(MIDDLE_C));
+
+    nodesData.filter(d => d.isPlayer).forEach(d => {
+        scoreGroup.append("line")
+            .attr("class", "range-line")
+            .attr("x1", d.x).attr("x2", d.x)
+            .attr("y1", midiToDisplayY(d.minMidi)).attr("y2", midiToDisplayY(d.maxMidi));
+    });
+
+    const nodeElements = svg.append("g")
+        .selectAll("g")
+        .data(nodesData)
+        .join("g")
+        .attr("class", "node")
+        .attr("id", d => `node-${d.id}`);
+
+    nodeElements.append("circle")
+        .attr("r", d => d.r)
+        .attr("class", d => d.type);
+
+    nodeElements.append("text").attr("class", "label").text(d => d.label);
+    nodeElements.append("text").attr("class", "note").text(d => d.isPlayer ? "" : "BATON");
+
+    function loadRegistry() {
+        try {
+            const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
+            if (!raw) return {};
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === "object" ? parsed : {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function saveRegistry() {
+        window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+    }
+
+    function normalizeRegistryShape(parsed) {
+        const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+            ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+            : {};
+
+        return Object.fromEntries(
+            Object.entries(candidate)
+                .filter(([serial, label]) => /^([1-9]\d{0,9}|DEMO-[A-Z0-9-]+)$/.test(serial) && typeof label === "string" && label.trim())
+                .map(([serial, label]) => [serial, label.trim()])
+        );
+    }
+
+    async function loadRegistryFromFile() {
+        try {
+            const response = await fetch(`${REGISTRY_FILE_PATH}?v=${Date.now()}`, { cache: "no-store" });
+            if (!response.ok) return {};
+            const parsed = await response.json();
+            return normalizeRegistryShape(parsed);
+        } catch (error) {
+            return {};
+        }
+    }
+
+    function displayNameFor(id) {
+        return state.registry[id] || id;
+    }
+
+    function normalizeControllerId(rawId) {
+        const label = displayNameFor(rawId);
+        if (CONTROLLER_LABELS.includes(label) || label === BATON_LABEL) return label;
+        if (CONTROLLER_LABELS.includes(rawId) || rawId === BATON_LABEL) return rawId;
+        return null;
+    }
+
+    function getPlayerNode(id) {
+        return nodesData.find(node => node.id === id && node.isPlayer) || null;
+    }
+
+    function getValidChordNotes(minMidi, maxMidi) {
+        const validNotes = [];
+        const rootOffset = keyRoots[currentKey];
+        const intervals = chordIntervals[currentMode][currentChord];
+
+        for (let oct = 0; oct <= 8; oct++) {
+            const baseMidi = (oct + 1) * 12 + rootOffset;
+            intervals.forEach(interval => {
+                const note = baseMidi + interval;
+                if (note >= minMidi && note <= maxMidi) validNotes.push(note);
+            });
+        }
+        return [...new Set(validNotes)].sort((a, b) => a - b);
+    }
+
+    function getValidScaleNotes(minMidi, maxMidi) {
+        const validNotes = [];
+        const rootOffset = keyRoots[currentKey];
+        const intervals = scaleIntervals[currentMode];
+
+        for (let oct = 0; oct <= 8; oct++) {
+            const baseMidi = (oct + 1) * 12 + rootOffset;
+            intervals.forEach(interval => {
+                const note = baseMidi + interval;
+                if (note >= minMidi && note <= maxMidi) validNotes.push(note);
+            });
+        }
+        return [...new Set(validNotes)].sort((a, b) => a - b);
+    }
+
+    function getNearestNoteFromSet(set, currentMidi, direction) {
+        if (!set.length) return currentMidi;
+        if (direction > 0) {
+            for (const note of set) {
+                if (note > currentMidi) return note;
+            }
+            return set[set.length - 1];
+        }
+        if (direction < 0) {
+            for (let i = set.length - 1; i >= 0; i -= 1) {
+                if (set[i] < currentMidi) return set[i];
+            }
+            return set[0];
+        }
+        return set.reduce((best, note) =>
+            Math.abs(note - currentMidi) < Math.abs(best - currentMidi) ? note : best
+        );
+    }
+
+    function applyPitchToNode(d, midi, animate = true) {
+        d.midi = midi;
+        d.noteName = Tone.Frequency(d.midi, "midi").toNote();
+        d.displayNote = midiToDisplayNote(d.midi);
+        d.y = midiToDisplayY(d.midi);
+        const selection = d3.select(`#node-${d.id}`);
+        if (animate) {
+            selection.transition().duration(220).attr("transform", `translate(${d.x},${d.y})`);
+        } else {
+            selection.attr("transform", `translate(${d.x},${d.y})`);
+        }
+        selection.select("text.note").text(d.displayNote);
+    }
+
+    function flashNode(id) {
+        const circle = d3.select(`#node-${id} circle`);
+        circle.style("filter", "brightness(1.8)");
+        setTimeout(() => circle.style("filter", null), 140);
+    }
+
+    function flashBackground() {
+        d3.select("body").transition().duration(80).style("background-color", "#f1f5f9")
+            .transition().duration(220).style("background-color", "#fafafa");
+    }
+
+    function initializePlayers() {
+        nodesData.forEach(node => {
+            if (!node.isPlayer) {
+                d3.select(`#node-${node.id}`).attr("transform", `translate(${node.x},${node.y})`);
+                return;
+            }
+            const candidates = getValidChordNotes(node.minMidi, node.maxMidi);
+            const initial = getNearestNoteFromSet(candidates, node.startMidi, 0);
+            applyPitchToNode(node, initial, false);
+        });
+    }
+
+    function updateHudState(extra = "") {
+        document.getElementById("hud-state").textContent =
+            `KEY: ${currentKey} ${currentMode} | CHORD: ${currentChord} | BATON: ${BATON_LABEL}${extra ? " | " + extra : ""}`;
+    }
+
+    function refreshHarmony(animatedPlayers = true) {
+        chordBackdrop.text(`${currentKey} ${currentMode} ${currentChord}`);
+        nodesData.forEach(node => {
+            if (!node.isPlayer) return;
+            const notes = getValidChordNotes(node.minMidi, node.maxMidi);
+            const nextMidi = getNearestNoteFromSet(notes, node.midi ?? node.startMidi, 0);
+            applyPitchToNode(node, nextMidi, animatedPlayers);
+        });
+        updateHudState();
+    }
+
+    function stepPlayerWithinChord(node, delta) {
+        const options = getValidChordNotes(node.minMidi, node.maxMidi);
+        applyPitchToNode(node, getNearestNoteFromSet(options, node.midi, delta), true);
+    }
+
+    function stepPlayerWithinKey(node, delta) {
+        const options = getValidScaleNotes(node.minMidi, node.maxMidi);
+        applyPitchToNode(node, getNearestNoteFromSet(options, node.midi, delta), true);
+    }
+
+    function playPlayer(node, duration = "8n") {
+        orchestra.play(node.type, node.noteName, duration);
+        flashNode(node.id);
+    }
+
+    function playNearbySet(node) {
+        const players = nodesData.filter(d => d.isPlayer).sort((a, b) => a.col - b.col);
+        const index = players.findIndex(d => d.id === node.id);
+        const selected = players.filter((_, i) => Math.abs(i - index) <= 1);
+        selected.forEach((member, offset) => {
+            Tone.Transport.scheduleOnce(() => playPlayer(member, "8n"), `+${offset * 0.03}`);
+        });
+    }
+
+    function changeKey(delta) {
+        const currentIndex = keyOrder.indexOf(currentKey);
+        const nextIndex = (currentIndex + delta + keyOrder.length) % keyOrder.length;
+        currentKey = keyOrder[nextIndex];
+        refreshHarmony(true);
+    }
+
+    function changeChord(delta) {
+        const currentIndex = chordOrder.indexOf(currentChord);
+        const nextIndex = (currentIndex + delta + chordOrder.length) % chordOrder.length;
+        currentChord = chordOrder[nextIndex];
+        refreshHarmony(true);
+    }
+
+    function toggleMode() {
+        currentMode = currentMode === "Major" ? "Minor" : "Major";
+        refreshHarmony(true);
+    }
+
+    function playFullChord() {
+        const players = nodesData.filter(d => d.isPlayer);
+        players.forEach((node, index) => {
+            Tone.Transport.scheduleOnce(() => playPlayer(node, "2n"), `+${index * 0.02}`);
+        });
+        flashBackground();
+    }
+
+    function handlePlayerGesture(node, gestureCode) {
+        if (gestureCode === 1) stepPlayerWithinChord(node, -1);
+        if (gestureCode === 2) stepPlayerWithinChord(node, 1);
+        if (gestureCode === 3) stepPlayerWithinKey(node, -1);
+        if (gestureCode === 4) stepPlayerWithinKey(node, 1);
+        if (gestureCode === 6) changeKey(1);
+        if (gestureCode === 8) playNearbySet(node);
+    }
+
+    function handleBatonGesture(gestureCode) {
+        if (gestureCode === 1) changeKey(-1);
+        if (gestureCode === 2) changeKey(1);
+        if (gestureCode === 3) changeChord(-1);
+        if (gestureCode === 4) changeChord(1);
+        if (gestureCode === 8) toggleMode();
+    }
+
+    function handleControllerAction(controllerId, field, numericValue) {
+        if (controllerId === BATON_LABEL) {
+            if (field === "a" && numericValue === 3) playFullChord();
+            if (field === "g") handleBatonGesture(numericValue);
+            return;
+        }
+
+        const node = getPlayerNode(controllerId);
+        if (!node) return;
+
+        if (field === "a" && numericValue === 3) {
+            playPlayer(node, "8n");
+            return;
+        }
+        if (field === "g") handlePlayerGesture(node, numericValue);
+    }
+
+    function parseHubLine(rawLine) {
+        const line = (rawLine || "").trim();
+        if (!line) return null;
+        const match = /^([A-Za-z0-9-]+)\|([a-z])=(-?\d+)$/.exec(line);
+        if (!match) return null;
+
+        const rawId = match[1];
+        const field = match[2];
+        const numericValue = Number(match[3]);
+        if (!Number.isFinite(numericValue)) return null;
+
+        const controllerId = normalizeControllerId(rawId);
+        if (!controllerId) return null;
+        if (field !== "a" && field !== "g") return null;
+
+        return { controllerId, field, numericValue };
+    }
+
+    function handleHubLine(rawLine) {
+        const message = parseHubLine(rawLine);
+        if (!message) return;
+        handleControllerAction(message.controllerId, message.field, message.numericValue);
+    }
+
+    class LineBreakTransformer {
+        constructor() {
+            this.buffer = "";
+        }
+        transform(chunk, controller) {
+            this.buffer += chunk;
+            const lines = this.buffer.split(/\r?\n/);
+            this.buffer = lines.pop();
+            lines.forEach(line => controller.enqueue(line));
+        }
+        flush(controller) {
+            if (this.buffer) controller.enqueue(this.buffer);
+        }
+    }
+
+    async function readHubLoop() {
+        try {
+            while (state.serial.keepReading && state.serial.reader) {
+                const { value, done } = await state.serial.reader.read();
+                if (done) break;
+                if (typeof value === "string") handleHubLine(value);
+            }
+        } catch (error) {
+            await disconnectHub();
+        } finally {
+            if (state.serial.keepReading) await disconnectHub();
+        }
+    }
+
+    async function connectHub() {
+        if (!("serial" in navigator)) return;
+        try {
+            const availablePorts = await navigator.serial.getPorts();
+            const knownMicrobitPort = availablePorts.find(port => {
+                const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+                return info && info.usbVendorId === 0x0D28;
+            });
+
+            state.serial.port = knownMicrobitPort || await navigator.serial.requestPort({ filters: MICROBIT_USB_FILTERS });
+            await state.serial.port.open({ baudRate: 115200 });
+            const decoder = new TextDecoderStream();
+            state.serial.inputDone = state.serial.port.readable.pipeTo(decoder.writable);
+            state.serial.reader = decoder.readable
+                .pipeThrough(new TransformStream(new LineBreakTransformer()))
+                .getReader();
+            state.serial.keepReading = true;
+            document.getElementById("connectBtn").textContent = "Disconnect Hub";
+            updateHudState("HUB CONNECTED");
+            readHubLoop();
+        } catch (error) {
+            await disconnectHub();
+        }
+    }
+
+    async function disconnectHub() {
+        state.serial.keepReading = false;
+        if (state.serial.reader) {
+            try { await state.serial.reader.cancel(); } catch (error) {}
+            try { state.serial.reader.releaseLock(); } catch (error) {}
+            state.serial.reader = null;
+        }
+        if (state.serial.inputDone) {
+            try { await state.serial.inputDone; } catch (error) {}
+            state.serial.inputDone = null;
+        }
+        if (state.serial.port) {
+            try { await state.serial.port.close(); } catch (error) {}
+            state.serial.port = null;
+        }
+        document.getElementById("connectBtn").textContent = "Connect Hub";
+        updateHudState();
+    }
+
+    function ensureDemoRegistry() {
+        const labels = [...CONTROLLER_LABELS, BATON_LABEL];
+        labels.forEach((label, index) => {
+            state.registry[DEMO_DEVICE_IDS[index]] = label;
+        });
+    }
+
+    function createDemoMessages() {
+        const players = CONTROLLER_LABELS.map((label, index) => ({
+            id: DEMO_DEVICE_IDS[index],
+            label
+        }));
+        const baton = DEMO_DEVICE_IDS[DEMO_DEVICE_IDS.length - 1];
+        const messages = [];
+
+        const player = players[Math.floor(Math.random() * players.length)];
+        const playerGestures = [1, 2, 3, 4, 8];
+        messages.push(`${player.id}|g=${playerGestures[Math.floor(Math.random() * playerGestures.length)]}`);
+        if (Math.random() > 0.55) messages.push(`${player.id}|a=3`);
+        if (Math.random() > 0.86) messages.push(`${player.id}|g=6`);
+
+        if (Math.random() > 0.7) {
+            const batonGestures = [1, 2, 3, 4, 8];
+            messages.push(`${baton}|g=${batonGestures[Math.floor(Math.random() * batonGestures.length)]}`);
+        }
+        if (Math.random() > 0.82) messages.push(`${baton}|a=3`);
+
+        return messages;
+    }
+
+    function toggleSimulation() {
+        if (state.simulationRunning) {
+            clearInterval(state.simulationTimer);
+            state.simulationRunning = false;
+            state.simulationTimer = null;
+            document.getElementById("simulateBtn").textContent = "Start Demo";
+            updateHudState();
+            return;
+        }
+        ensureDemoRegistry();
+        state.simulationRunning = true;
+        document.getElementById("simulateBtn").textContent = "Stop Demo";
+        updateHudState("DEMO");
+        state.simulationTimer = setInterval(() => {
+            createDemoMessages().forEach(handleHubLine);
+        }, 500);
+    }
+
+    document.getElementById("connectBtn").addEventListener("click", async () => {
+        if (state.serial.port) {
+            await disconnectHub();
+        } else {
+            await connectHub();
+        }
+    });
+
+    document.getElementById("simulateBtn").addEventListener("click", toggleSimulation);
+
+    if ("serial" in navigator) {
+        navigator.serial.addEventListener("disconnect", async event => {
+            if (state.serial.port && event.target === state.serial.port) {
+                await disconnectHub();
+            }
+        });
+    }
+
+    async function initializeRegistry() {
+        const fileRegistry = await loadRegistryFromFile();
+        state.registry = { ...fileRegistry, ...state.registry };
+        saveRegistry();
+    }
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+        const startBtn = document.getElementById("startBtn");
+        startBtn.textContent = "Loading samples...";
+        state.registry = loadRegistry();
+        await initializeRegistry();
+        await Tone.start();
+        await orchestra.loadAll("forte");
+        Tone.Transport.start();
+        initializePlayers();
+        refreshHarmony(false);
+        document.getElementById("overlay").style.display = "none";
+    });
+</script>
+</body>
+</html>
