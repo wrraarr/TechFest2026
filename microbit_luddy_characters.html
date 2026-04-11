@@ -562,6 +562,7 @@
         const REGISTRY_FILE_PATH = "registry.json";
         const DEMO_IDS = ["SIM-1", "SIM-2", "SIM-3", "SIM-4", "SIM-5", "SIM-6"];
         const FIELD_LIMIT = 980;
+        const SHOOTER_TURN_STEP = Math.PI / 8;
         const CHARACTER_STYLES = [
             { shell: "#f3b1a6", stripe: "#fff4e8", stroke: "#8b443a", badge: "#7f1d1d", glow: "rgba(243, 177, 166, 0.28)" },
             { shell: "#94d2bd", stripe: "#ecfff7", stroke: "#25645a", badge: "#155e63", glow: "rgba(148, 210, 189, 0.28)" },
@@ -576,6 +577,7 @@
             nodes: new Map(),
             registry: {},
             projectiles: [],
+            explosions: [],
             simulationRunning: false,
             simulationTimer: null,
             renderTimer: null,
@@ -600,6 +602,11 @@
         function mapRange(value, inMin, inMax, outMin, outMax) {
             const ratio = (value - inMin) / (inMax - inMin || 1);
             return outMin + ratio * (outMax - outMin);
+        }
+
+        function normalizeAngle(angle) {
+            const fullTurn = Math.PI * 2;
+            return ((angle % fullTurn) + fullTurn) % fullTurn;
         }
 
         function normalizeBoolean(value) {
@@ -709,8 +716,12 @@
                 stripeHeight: 8 + (seed % 4) * 2,
                 legSpread: 7 + (seed % 4) * 2,
                 antenna: seed % 2 === 0,
+                shooterAngle: normalizeAngle((seed % 8) * (Math.PI / 4)),
                 shakeUntil: 0,
                 blinkOffset: seed % 19,
+                explosionUntil: 0,
+                respawnAt: 0,
+                invulnerableUntil: 0,
                 lastUpdate: performance.now()
             };
         }
@@ -791,6 +802,11 @@
         }
 
         function stepNodeMotion(node) {
+            const now = performance.now();
+            if (node.respawnAt > now) return;
+            if (node.respawnAt && node.respawnAt <= now) {
+                respawnNode(node);
+            }
             const moveStep = 22;
             node.targetX = clamp(node.targetX + node.velocityX * moveStep, -FIELD_LIMIT, FIELD_LIMIT);
             node.targetY = clamp(node.targetY + node.velocityY * moveStep, -FIELD_LIMIT, FIELD_LIMIT);
@@ -799,24 +815,94 @@
         }
 
         function launchProjectile(node) {
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 58 + Math.random() * 22;
+            const angle = node.shooterAngle;
+            const speed = 62 + Math.random() * 10;
+            const spawnDistance = 30;
             state.projectiles.push({
                 id: `${node.id}-${performance.now()}-${Math.random()}`,
-                x: node.x,
-                y: node.y,
+                x: node.x + Math.cos(angle) * spawnDistance,
+                y: node.y + Math.sin(angle) * spawnDistance,
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
                 radius: 10 + Math.random() * 6,
                 life: 14,
+                ownerId: node.id,
                 color: node.palette.stripe,
                 stroke: node.palette.stroke
             });
         }
 
+        function estimateNodeHitRadius(node) {
+            const bodyW = mapRange(node.light, 0, 255, 44, 66) + node.bodyWidthBias;
+            const bodyH = mapRange(node.sound, 0, 255, 48, 72) + node.bodyHeightBias;
+            return Math.max(bodyW, bodyH) * 0.46;
+        }
+
+        function respawnNode(node) {
+            const offsetX = mapRange(Math.random(), 0, 1, -180, 180);
+            const offsetY = mapRange(Math.random(), 0, 1, -160, 160);
+            node.x = clamp(node.x + offsetX, -FIELD_LIMIT, FIELD_LIMIT);
+            node.y = clamp(node.y + offsetY, -FIELD_LIMIT, FIELD_LIMIT);
+            node.targetX = node.x;
+            node.targetY = node.y;
+            node.pulse = 1;
+            node.respawnAt = 0;
+            node.explosionUntil = 0;
+            node.invulnerableUntil = performance.now() + 1000;
+        }
+
+        function triggerNodeExplosion(node, projectile) {
+            const now = performance.now();
+            if (node.respawnAt > now || node.invulnerableUntil > now) return false;
+
+            const fragmentCount = 9;
+            const fragments = Array.from({ length: fragmentCount }, (_, index) => {
+                const angle = (Math.PI * 2 * index) / fragmentCount + Math.random() * 0.45;
+                const speed = 16 + Math.random() * 18;
+                return {
+                    angle,
+                    speed,
+                    size: 5 + Math.random() * 6
+                };
+            });
+
+            state.explosions.push({
+                id: `${node.id}-explosion-${now}-${Math.random()}`,
+                x: node.x,
+                y: node.y,
+                life: 18,
+                maxLife: 18,
+                ring: estimateNodeHitRadius(node) + 10,
+                color: projectile?.color || node.palette.shell,
+                stroke: projectile?.stroke || node.palette.stroke,
+                fragments
+            });
+
+            node.explosionUntil = now + 700;
+            node.respawnAt = now + 900;
+            node.invulnerableUntil = now + 1800;
+            node.velocityX = 0;
+            node.velocityY = 0;
+            node.pulse = 1.4;
+            state.latestEvent = `${node.label} exploded`;
+            updateSummary();
+            return true;
+        }
+
+        function stepExplosions() {
+            state.explosions = state.explosions
+                .map(explosion => ({
+                    ...explosion,
+                    life: explosion.life - 1
+                }))
+                .filter(explosion => explosion.life > 0);
+        }
+
         function stepProjectiles() {
-            state.projectiles = state.projectiles
-                .map(projectile => ({
+            const nextProjectiles = [];
+
+            for (const projectile of state.projectiles) {
+                const nextProjectile = {
                     ...projectile,
                     x: projectile.x + projectile.vx,
                     y: projectile.y + projectile.vy,
@@ -824,12 +910,35 @@
                     vy: projectile.vy * 0.92,
                     life: projectile.life - 1,
                     radius: projectile.radius * 0.96
-                }))
-                .filter(projectile =>
-                    projectile.life > 0 &&
-                    Math.abs(projectile.x) < FIELD_LIMIT * 1.2 &&
-                    Math.abs(projectile.y) < FIELD_LIMIT * 1.2
-                );
+                };
+
+                if (
+                    nextProjectile.life <= 0 ||
+                    Math.abs(nextProjectile.x) >= FIELD_LIMIT * 1.2 ||
+                    Math.abs(nextProjectile.y) >= FIELD_LIMIT * 1.2
+                ) {
+                    continue;
+                }
+
+                const hitNode = [...state.nodes.values()].find(node => {
+                    const now = performance.now();
+                    if (node.id === nextProjectile.ownerId) return false;
+                    if (node.respawnAt > now || node.explosionUntil > now || node.invulnerableUntil > now) return false;
+                    const dx = nextProjectile.x - node.x;
+                    const dy = nextProjectile.y - node.y;
+                    const hitRadius = estimateNodeHitRadius(node) + nextProjectile.radius * 0.6;
+                    return (dx * dx + dy * dy) <= hitRadius * hitRadius;
+                });
+
+                if (hitNode) {
+                    triggerNodeExplosion(hitNode, nextProjectile);
+                    continue;
+                }
+
+                nextProjectiles.push(nextProjectile);
+            }
+
+            state.projectiles = nextProjectiles;
         }
 
         function applyNodeUpdate(id, patch) {
@@ -846,6 +955,14 @@
             if (typeof patch.touch === "boolean") node.touch = patch.touch;
             if (typeof patch.logo === "boolean") node.logo = patch.logo;
             if (typeof patch.gesture === "string" && patch.gesture) node.gesture = patch.gesture;
+            if (patch.rotateClockwise) {
+                node.shooterAngle = normalizeAngle(node.shooterAngle - SHOOTER_TURN_STEP);
+                node.pulse = Math.max(node.pulse, 0.95);
+            }
+            if (patch.rotateCounterClockwise) {
+                node.shooterAngle = normalizeAngle(node.shooterAngle + SHOOTER_TURN_STEP);
+                node.pulse = Math.max(node.pulse, 0.95);
+            }
             if (patch.move === "up") {
                 node.velocityX = 0;
                 node.velocityY = -1;
@@ -871,6 +988,10 @@
             }
             if (patch.shakeBurst || patch.gesture === "shake") {
                 node.shakeUntil = performance.now() + 700;
+            }
+            if (node.respawnAt > performance.now()) {
+                node.lastUpdate = performance.now();
+                return;
             }
             if (patch.shootBall) {
                 launchProjectile(node);
@@ -900,8 +1021,8 @@
             if (key === "s" && numericValue >= 0 && numericValue <= 255) return { sound: numericValue };
             if (key === "c" && numericValue >= 0 && numericValue <= 360) return { compass: numericValue };
             if (key === "a") {
-                if (numericValue === 1) return { btnA: true, btnB: false, gesture: "button-a" };
-                if (numericValue === 2) return { btnA: false, btnB: true, gesture: "button-b" };
+                if (numericValue === 1) return { btnA: true, btnB: false, gesture: "button-a", rotateClockwise: true };
+                if (numericValue === 2) return { btnA: false, btnB: true, gesture: "button-b", rotateCounterClockwise: true };
                 if (numericValue === 3) return { gesture: "shoot", shootBall: true };
             }
             if (key === "g") {
@@ -934,7 +1055,10 @@
                             btnB: "btnB" in parsed ? normalizeBoolean(parsed.btnB) : undefined,
                             touch: "touch" in parsed ? normalizeBoolean(parsed.touch) : undefined,
                             logo: "logo" in parsed ? normalizeBoolean(parsed.logo) : undefined,
-                            gesture: parsed.gesture || undefined
+                            gesture: parsed.gesture || undefined,
+                            shootBall: normalizeBoolean(parsed.shootBall),
+                            rotateClockwise: normalizeBoolean(parsed.rotateClockwise),
+                            rotateCounterClockwise: normalizeBoolean(parsed.rotateCounterClockwise)
                         }
                     };
                 }
@@ -1051,6 +1175,9 @@
 
         function createDemoPacket(id) {
             const gesturePool = ["idle", "shake", "tilt-left", "tilt-right", "freefall"];
+            const rotateRoll = Math.random();
+            const rotateClockwise = rotateRoll > 0.9 && rotateRoll <= 0.95;
+            const rotateCounterClockwise = rotateRoll > 0.95;
             return JSON.stringify({
                 id,
                 light: Math.round(Math.random() * 255),
@@ -1062,6 +1189,9 @@
                 btnB: Math.random() > 0.89,
                 touch: Math.random() > 0.94,
                 logo: Math.random() > 0.96,
+                shootBall: Math.random() > 0.9,
+                rotateClockwise,
+                rotateCounterClockwise,
                 gesture: Math.random() > 0.82
                     ? gesturePool[Math.floor(Math.random() * gesturePool.length)]
                     : "idle"
@@ -1105,6 +1235,7 @@
                 stepNodeMotion(node);
                 const age = now - node.lastUpdate;
                 const awake = age < 2200;
+                const exploding = node.respawnAt > now || node.explosionUntil > now;
                 const blinkWindow = ((Math.floor(now / 240) + node.blinkOffset + state.blinkSeed) % 19) === 0;
                 const halo = mapRange(node.light, 0, 255, 18, 52);
                 const bodyW = mapRange(node.light, 0, 255, 44, 66) + node.bodyWidthBias;
@@ -1123,6 +1254,8 @@
                     meta: {
                         label: node.label,
                         gesture: node.gesture,
+                        exploding,
+                        shooterAngle: node.shooterAngle,
                         light: node.light,
                         sound: node.sound,
                         compass: node.compass,
@@ -1150,9 +1283,18 @@
             }));
         }
 
+        function buildExplosionSeriesData() {
+            stepExplosions();
+            return state.explosions.map(explosion => ({
+                value: [explosion.x, -explosion.y, explosion.life, explosion.maxLife, explosion.ring],
+                meta: explosion
+            }));
+        }
+
         function createOption() {
             const seriesData = buildSeriesData();
             const projectileData = buildProjectileSeriesData();
+            const explosionData = buildExplosionSeriesData();
 
             return {
                 animationDurationUpdate: 260,
@@ -1273,6 +1415,7 @@
                             const pulse = api.value(8);
                             const shakeX = api.value(9);
                             const shakeY = api.value(10);
+                            const exploding = meta.exploding;
                             const x = point[0] + shakeX;
                             const y = point[1] + bob + shakeY;
                             const shadowY = bodyH * 0.58;
@@ -1283,6 +1426,31 @@
                             const pinColor = awake ? "#8f7b71" : "#b8aba6";
                             const badgeBg = awake ? meta.palette.badge : "#8d7f7a";
                             const gestureText = meta.gesture && meta.gesture !== "idle" ? meta.gesture.toUpperCase() : "";
+                            const shooterLength = bodyW * 0.42;
+                            const shooterBubbleRadius = 6 + pulse * 1.5;
+                            const shooterDx = Math.cos(meta.shooterAngle);
+                            const shooterDy = -Math.sin(meta.shooterAngle);
+
+                            if (exploding) {
+                                return {
+                                    type: "group",
+                                    position: [x, y],
+                                    children: [
+                                        {
+                                            type: "text",
+                                            style: {
+                                                x: 0,
+                                                y: -38,
+                                                text: `${meta.label} BOOM`,
+                                                textAlign: "center",
+                                                textVerticalAlign: "middle",
+                                                font: "700 13px IBM Plex Sans",
+                                                fill: "#990000"
+                                            }
+                                        }
+                                    ]
+                                };
+                            }
 
                             return {
                                 type: "group",
@@ -1313,6 +1481,33 @@
                                         type: "rect",
                                         shape: { x: -bodyW / 2 + 7, y: -bodyH / 2 + 9, width: bodyW - 14, height: meta.stripeHeight, r: meta.stripeHeight / 2 },
                                         style: { fill: meta.palette.stripe }
+                                    },
+                                    {
+                                        type: "line",
+                                        shape: {
+                                            x1: 0,
+                                            y1: -2,
+                                            x2: shooterDx * shooterLength,
+                                            y2: shooterDy * shooterLength - 2
+                                        },
+                                        style: {
+                                            stroke: strokeColor,
+                                            lineWidth: 4,
+                                            lineCap: "round"
+                                        }
+                                    },
+                                    {
+                                        type: "circle",
+                                        shape: {
+                                            cx: shooterDx * (shooterLength + 7),
+                                            cy: shooterDy * (shooterLength + 7) - 2,
+                                            r: shooterBubbleRadius
+                                        },
+                                        style: {
+                                            fill: meta.palette.stripe,
+                                            stroke: strokeColor,
+                                            lineWidth: 2
+                                        }
                                     },
                                     meta.antenna ? {
                                         type: "group",
@@ -1507,6 +1702,75 @@
                             };
                         },
                         data: projectileData
+                    },
+                    {
+                        type: "custom",
+                        coordinateSystem: "cartesian2d",
+                        silent: true,
+                        z: 3,
+                        encode: {
+                            x: 0,
+                            y: 1
+                        },
+                        renderItem(params, api) {
+                            const point = api.coord([api.value(0), api.value(1)]);
+                            const life = api.value(2);
+                            const maxLife = api.value(3);
+                            const ring = api.value(4);
+                            const meta = explosionData[params.dataIndex].meta;
+                            const progress = 1 - life / Math.max(maxLife, 1);
+                            const alpha = Math.max(0, 0.9 - progress * 0.9);
+
+                            return {
+                                type: "group",
+                                children: [
+                                    {
+                                        type: "circle",
+                                        shape: {
+                                            cx: point[0],
+                                            cy: point[1],
+                                            r: ring * (0.45 + progress * 0.95)
+                                        },
+                                        style: {
+                                            stroke: meta.stroke,
+                                            lineWidth: Math.max(2, 6 - progress * 4),
+                                            fill: "rgba(255,255,255,0)",
+                                            opacity: alpha
+                                        }
+                                    },
+                                    {
+                                        type: "circle",
+                                        shape: {
+                                            cx: point[0],
+                                            cy: point[1],
+                                            r: ring * (0.2 + progress * 0.34)
+                                        },
+                                        style: {
+                                            fill: meta.color,
+                                            opacity: alpha * 0.35
+                                        }
+                                    },
+                                    ...meta.fragments.map(fragment => {
+                                        const distance = fragment.speed * (1 + progress * 1.8);
+                                        return {
+                                            type: "circle",
+                                            shape: {
+                                                cx: point[0] + Math.cos(fragment.angle) * distance,
+                                                cy: point[1] + Math.sin(fragment.angle) * distance,
+                                                r: Math.max(1.5, fragment.size * (1 - progress * 0.72))
+                                            },
+                                            style: {
+                                                fill: meta.color,
+                                                stroke: meta.stroke,
+                                                lineWidth: 1,
+                                                opacity: alpha
+                                            }
+                                        };
+                                    })
+                                ]
+                            };
+                        },
+                        data: explosionData
                     }
                 ]
             };
@@ -1537,6 +1801,7 @@
         function resetView() {
             state.nodes.clear();
             state.projectiles = [];
+            state.explosions = [];
             pruneNodes();
             state.latestEvent = "Waiting";
             setText("lastPacket", "No packets yet.");
