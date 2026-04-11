@@ -114,7 +114,7 @@
             padding: 28px 32px;
             margin-bottom: 18px;
             display: grid;
-            grid-template-columns: 1fr auto;
+            grid-template-columns: 1fr 1fr;
             gap: 24px;
             align-items: start;
         }
@@ -471,6 +471,126 @@
             font-size: 0.9rem;
         }
 
+        /* ---- registry panel ---- */
+        .registry-panel {
+            padding: 24px;
+            margin-bottom: 18px;
+        }
+
+        .registry-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 18px;
+        }
+
+        .registry-count {
+            color: rgba(34,23,21,0.62);
+            font-size: 0.94rem;
+            font-weight: 700;
+        }
+
+        .registry-form {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr auto;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .registry-form input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.82);
+            color: var(--ink);
+        }
+
+        .registry-form button {
+            appearance: none;
+            padding: 12px 18px;
+            border: 1px solid transparent;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--accent), #7a0000);
+            color: #fff7f4;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 12px 28px rgba(66, 35, 35, 0.14);
+        }
+
+        .registry-helper {
+            margin-top: 16px;
+            color: rgba(34,23,21,0.7);
+            line-height: 1.6;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        .action-row button {
+            appearance: none;
+            padding: 11px 16px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255,255,255,0.76);
+            color: var(--ink);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .registry-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .registry-item,
+        .empty-state {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 18px;
+            border-radius: var(--radius-card);
+            border: 1px solid rgba(71, 43, 43, 0.09);
+            background: linear-gradient(160deg, rgba(255,255,255,0.86), rgba(247,237,226,0.95));
+        }
+
+        .registry-item strong,
+        .registry-item span {
+            display: block;
+        }
+
+        .registry-item strong {
+            font-size: 0.98rem;
+        }
+
+        .registry-item span {
+            margin-top: 4px;
+            color: rgba(34,23,21,0.6);
+            font-family: "IBM Plex Mono", monospace;
+        }
+
+        .delete-btn {
+            appearance: none;
+            padding: 9px 14px;
+            border: 1px solid rgba(153,0,0,0.14);
+            border-radius: 999px;
+            background: rgba(153,0,0,0.06);
+            color: var(--accent);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            color: rgba(34,23,21,0.62);
+        }
+
         /* ---- ref table ---- */
         .ref-panel {
             padding: 24px;
@@ -519,6 +639,11 @@
             .hero { grid-template-columns: 1fr; }
             .monitor-grid { grid-template-columns: 1fr; }
             .last-event-bar { flex-wrap: wrap; }
+            .registry-top {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .registry-form { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -562,7 +687,7 @@
                 </div>
                 <div style="padding:16px 18px; border-radius:var(--radius-card); border:1px dashed rgba(34,23,21,0.18); background:rgba(255,255,255,0.6);">
                     <strong style="font-size:0.76rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--teal);">All devices shown</strong>
-                    <p style="margin-top:8px; font-size:0.88rem; line-height:1.55; color:rgba(34,23,21,0.7);">Unlike the experience pages, this monitor shows codes from <em>all</em> micro:bits — registered or not. Friendly names come from the registry on the Home page.</p>
+                    <p style="margin-top:8px; font-size:0.88rem; line-height:1.55; color:rgba(34,23,21,0.7);">Unlike the experience pages, this monitor shows codes from <em>all</em> micro:bits — registered or not. Friendly names come from the registry on this page.</p>
                 </div>
             </div>
         </section>
@@ -616,6 +741,32 @@
             </div>
         </section>
 
+        <section class="panel registry-panel" id="registry">
+            <div class="registry-top">
+                <div>
+                    <p class="eyebrow">Facilitator Setup · Device Registry</p>
+                    <h3>Name each micro:bit before the room shows up.</h3>
+                </div>
+                <div class="registry-count" id="registryCount">0 saved</div>
+            </div>
+
+            <form class="registry-form" id="registryForm">
+                <input id="serialInput" name="serial" inputmode="numeric" placeholder="Micro:bit serial number" aria-label="Microbit serial number">
+                <input id="labelInput" name="label" placeholder="Friendly name (e.g. Violin 1, Baton, Station A)" aria-label="Friendly label">
+                <button type="submit">Save Device</button>
+            </form>
+
+            <p class="registry-helper" id="registryHelper">Give each board a friendly name so the screens can say "Violin 1 just played" instead of a long serial number. Everything is saved locally on this laptop. Import and export use the shared registry.json file.</p>
+
+            <div class="action-row">
+                <button id="importRegistryBtn" type="button">Import Registry</button>
+                <button id="exportRegistryBtn" type="button">Export Registry</button>
+                <button id="clearRegistryBtn" type="button">Clear Registry</button>
+            </div>
+
+            <div class="registry-list" id="registryList"></div>
+        </section>
+
         <!-- code reference -->
         <section class="ref-panel panel">
             <p class="eyebrow">Code Reference</p>
@@ -651,6 +802,8 @@
             </div>
         </section>
     </main>
+
+    <input id="registryFileInput" type="file" accept="application/json,.json" hidden>
 
     <script>
         /* ---- constants ---- */
@@ -711,8 +864,70 @@
             } catch { return {}; }
         }
 
+        function saveRegistry() {
+            localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+        }
+
+        function isValidMicrobitSerial(id) {
+            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
+            const numericId = Number(id);
+            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
+        }
+
+        function normalizeRegistryShape(parsed) {
+            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+                : {};
+
+            return Object.fromEntries(
+                Object.entries(candidate)
+                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
+                    .map(([serial, label]) => [serial, label.trim()])
+            );
+        }
+
         function getDeviceLabel(id) {
             return state.registry[id] || null;
+        }
+
+        function renderRegistry() {
+            const registryList = document.getElementById("registryList");
+            const registryCount = document.getElementById("registryCount");
+            const registryHelper = document.getElementById("registryHelper");
+
+            const entries = Object.entries(state.registry)
+                .sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+
+            registryCount.textContent = `${entries.length} saved`;
+
+            if (!entries.length) {
+                registryHelper.textContent = "Give each board a friendly name so the screens can say \"Violin 1 just played\" instead of a long serial number. Everything is saved locally on this laptop. Import and export use the shared registry.json file.";
+                registryList.innerHTML = '<div class="empty-state">No micro:bits saved yet. Add a serial number and a friendly name to get the room ready for visitors.</div>';
+                renderDevices();
+                return;
+            }
+
+            registryHelper.textContent = "Tip: friendly names like Baton, Violin 1, or Station A make the big-screen callouts easy for visitors to follow.";
+            registryList.innerHTML = entries.map(([serial, label]) => `
+                <div class="registry-item">
+                    <div>
+                        <strong>${escHtml(label)}</strong>
+                        <span>${escHtml(serial)}</span>
+                    </div>
+                    <button class="delete-btn" type="button" data-serial="${escHtml(serial)}">Remove</button>
+                </div>
+            `).join("");
+
+            renderDevices();
+        }
+
+        function downloadRegistry() {
+            const blob = new Blob([JSON.stringify(state.registry, null, 2)], { type: "application/json" });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "registry.json";
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 250);
         }
 
         /* ---- serial ---- */
@@ -756,6 +971,7 @@
                 state.devices[id] = { label, lastCode: code, lastTime: Date.now() };
                 renderDevices();
             } else {
+                state.devices[id].label = label;
                 state.devices[id].lastCode = code;
                 state.devices[id].lastTime = Date.now();
             }
@@ -860,8 +1076,14 @@
         function renderDevices() {
             const grid = document.getElementById("deviceGrid");
             grid.innerHTML = "";
-            Object.entries(state.devices).forEach(([id, info]) => {
-                const label = info.label || null;
+            const entries = Object.entries(state.devices);
+            if (!entries.length) {
+                grid.innerHTML = '<span class="device-empty">No devices seen yet</span>';
+                return;
+            }
+
+            entries.forEach(([id, info]) => {
+                const label = getDeviceLabel(id) || info.label || null;
                 const chip = document.createElement("div");
                 chip.className = "device-chip";
                 chip.id = `device-chip-${id}`;
@@ -968,6 +1190,73 @@
             document.getElementById("pauseBtn").textContent = state.paused ? "Resume" : "Pause";
         });
 
+        document.getElementById("registryForm").addEventListener("submit", event => {
+            event.preventDefault();
+            const serialInput = document.getElementById("serialInput");
+            const labelInput = document.getElementById("labelInput");
+            const registryHelper = document.getElementById("registryHelper");
+
+            const serial = serialInput.value.trim();
+            const label = labelInput.value.trim();
+
+            if (!isValidMicrobitSerial(serial)) {
+                registryHelper.textContent = "That doesn't look like a micro:bit serial number yet — try a whole number only.";
+                serialInput.focus();
+                return;
+            }
+
+            if (!label) {
+                registryHelper.textContent = "Add a friendly name (like Violin 1 or Station A) so the big screen can call it out clearly.";
+                labelInput.focus();
+                return;
+            }
+
+            state.registry[serial] = label;
+            saveRegistry();
+            renderRegistry();
+            event.currentTarget.reset();
+            serialInput.focus();
+        });
+
+        document.getElementById("registryList").addEventListener("click", event => {
+            const button = event.target.closest(".delete-btn");
+            if (!button) return;
+            delete state.registry[button.dataset.serial];
+            saveRegistry();
+            renderRegistry();
+        });
+
+        document.getElementById("exportRegistryBtn").addEventListener("click", () => {
+            downloadRegistry();
+        });
+
+        document.getElementById("clearRegistryBtn").addEventListener("click", () => {
+            state.registry = {};
+            saveRegistry();
+            renderRegistry();
+        });
+
+        document.getElementById("importRegistryBtn").addEventListener("click", () => {
+            document.getElementById("registryFileInput").click();
+        });
+
+        document.getElementById("registryFileInput").addEventListener("change", async event => {
+            const [file] = event.target.files || [];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const parsed = JSON.parse(text);
+                state.registry = normalizeRegistryShape(parsed);
+                saveRegistry();
+                renderRegistry();
+            } catch (error) {
+                document.getElementById("registryHelper").textContent = "Hmm — that file didn't look like a TechFest registry.json. Double-check the file and try again.";
+            } finally {
+                event.target.value = "";
+            }
+        });
+
         /* ---- serial support check ---- */
         if (!("serial" in navigator)) {
             document.getElementById("noSerialNotice").style.display = "block";
@@ -994,6 +1283,7 @@
 
         /* ---- init ---- */
         state.registry = loadRegistry();
+        renderRegistry();
     </script>
 </body>
 </html>

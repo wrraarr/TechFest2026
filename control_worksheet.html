@@ -243,7 +243,7 @@
             font-size: clamp(2.4rem, 5vw, 4.4rem);
             letter-spacing: -0.05em;
             line-height: 0.96;
-            max-width: 10ch;
+            max-width: 14ch;
         }
 
         .hero-copy {
@@ -569,6 +569,59 @@
         .download-bar .dl-sub {
             margin-top: 2px;
             font-size: 0.85rem;
+            color: rgba(34, 23, 21, 0.62);
+        }
+
+        .prompt-bar {
+            margin-top: 16px;
+            padding: 18px 20px;
+            border-radius: var(--radius-card);
+            border: 1px solid rgba(47, 109, 102, 0.22);
+            background: linear-gradient(135deg, rgba(237, 250, 247, 0.98), rgba(222, 243, 239, 0.96));
+            display: grid;
+            gap: 12px;
+        }
+
+        .prompt-title {
+            font-family: "Newsreader", serif;
+            font-size: 1.26rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .prompt-sub {
+            font-size: 0.95rem;
+            color: rgba(34, 23, 21, 0.76);
+            line-height: 1.6;
+            max-width: 72ch;
+        }
+
+        .prompt-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .prompt-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            border-radius: 999px;
+            background: var(--teal);
+            color: #f6fffd;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            box-shadow: 0 12px 24px rgba(47, 109, 102, 0.2);
+        }
+
+        .prompt-link:hover {
+            filter: brightness(1.04);
+        }
+
+        .prompt-hint {
+            font-size: 0.86rem;
             color: rgba(34, 23, 21, 0.62);
         }
 
@@ -904,6 +957,15 @@
                     </div>
                     <button class="download-btn" id="downloadBtn">⬇ Download My Worksheet</button>
                 </div>
+
+                <div class="prompt-bar">
+                    <div class="prompt-title">Part 3: Vibe code your idea</div>
+                    <div class="prompt-sub">When your plan feels ready, open the project prompt and use it to vibe code a brand-new page or update one of the current pages. You can paste in the ideas from this worksheet and ask the AI to build the interaction for you.</div>
+                    <div class="prompt-actions">
+                        <a class="prompt-link" href="prompt.md" target="_blank" rel="noopener">Open the build prompt →</a>
+                        <span class="prompt-hint">Tip: ask for a new page, or name one page you want to improve.</span>
+                    </div>
+                </div>
             </section>
         </section>
     </main>
@@ -1000,6 +1062,8 @@
             lines.push("=" .repeat(64));
             lines.push("Generated from Inventor's Worksheet · Luddy TechFest 2026");
             lines.push("MakeCode project: https://makecode.microbit.org/S69783-61882-73735-46759");
+            lines.push("Build prompt: prompt.md");
+            lines.push("Try asking the AI to vibe code a new page or update an existing page using your ideas above.");
 
             const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
             const url = URL.createObjectURL(blob);

@@ -196,7 +196,7 @@
 
         .lockup-slot {
             min-height: 112px;
-            padding: 16px 18px;
+            padding: 10px 18px;
             border: 1px dashed rgba(153, 0, 0, 0.28);
             border-radius: var(--radius-slot);
             background:
@@ -659,6 +659,41 @@
                 height: 44px;
             }
         }
+        .footer-card {
+  max-width: 680px;
+  margin: 3rem auto 2rem;
+  padding: 1.75rem 2rem;
+  background: #ffffff;
+  border: 1px solid #ececea;
+  border-radius: 12px;
+  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.footer-card .divider {
+  width: 32px; height: 2px;
+  background: #6b8e5a;
+  margin: 0 auto 1rem;
+  border-radius: 1px;
+  opacity: 0.6;
+}
+.footer-card .credit {
+  color: #8a8a8a;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0;
+}
+.footer-card .name-link {
+  color: #2b2b2b;
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+}
+.footer-card .name-link:hover {
+  color: #6b8e5a;
+  border-bottom-color: #6b8e5a;
+}
+
+
     </style>
 </head>
 <body>
@@ -802,192 +837,15 @@
             </div>
         </section>
 
-        <section class="section panel registry-panel" id="registry">
-            <div class="registry-top">
-                <div>
-                    <p class="eyebrow">Facilitator Setup · Device Registry</p>
-                    <h2>Name each micro:bit before the room shows up.</h2>
-                </div>
-                <div class="registry-count" id="registryCount">0 saved</div>
-            </div>
+        <footer class="footer-card">
+  <div class="divider"></div>
+  <p class="credit">
+    Designed by
+    <a class="name-link" href="https://bloombot.com" target="_blank" rel="noopener">Matthew Francisco</a> Senior Lecturer of Informatics, 
+        <br> for TechFest with assistance from GPT-5.4 and Claude Opus 4.6</span>
+  </p>
+</footer>
 
-            <form class="registry-form" id="registryForm">
-                <input id="serialInput" name="serial" inputmode="numeric" placeholder="Micro:bit serial number" aria-label="Microbit serial number">
-                <input id="labelInput" name="label" placeholder="Friendly name (e.g. Violin 1, Baton, Station A)" aria-label="Friendly label">
-                <button type="submit">Save Device</button>
-            </form>
-
-            <p class="registry-helper" id="registryHelper">Give each board a friendly name so the screens can say "Violin 1 just played" instead of a long serial number. Everything is saved locally on this laptop. Import and export use the shared registry.json file.</p>
-
-            <div class="action-row">
-                <button id="importRegistryBtn" type="button">Import Registry</button>
-                <button id="exportRegistryBtn" type="button">Export Registry</button>
-                <button id="clearRegistryBtn" type="button">Clear Registry</button>
-            </div>
-
-            <div class="registry-list" id="registryList"></div>
-        </section>
     </main>
-
-    <input id="registryFileInput" type="file" accept="application/json,.json" hidden>
-
-    <script>
-        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
-
-        const registryForm = document.getElementById("registryForm");
-        const serialInput = document.getElementById("serialInput");
-        const labelInput = document.getElementById("labelInput");
-        const registryList = document.getElementById("registryList");
-        const registryCount = document.getElementById("registryCount");
-        const registryHelper = document.getElementById("registryHelper");
-        const importRegistryBtn = document.getElementById("importRegistryBtn");
-        const exportRegistryBtn = document.getElementById("exportRegistryBtn");
-        const clearRegistryBtn = document.getElementById("clearRegistryBtn");
-        const registryFileInput = document.getElementById("registryFileInput");
-
-        const state = {
-            registry: loadRegistry()
-        };
-
-        function loadRegistry() {
-            try {
-                const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
-                if (!raw) return {};
-                const parsed = JSON.parse(raw);
-                return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
-            } catch (error) {
-                return {};
-            }
-        }
-
-        function saveRegistry() {
-            window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
-        }
-
-        function isValidMicrobitSerial(id) {
-            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
-            const numericId = Number(id);
-            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
-        }
-
-        function normalizeRegistryShape(parsed) {
-            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
-                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
-                : {};
-
-            return Object.fromEntries(
-                Object.entries(candidate)
-                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
-                    .map(([serial, label]) => [serial, label.trim()])
-            );
-        }
-
-        function escapeHtml(value) {
-            return String(value)
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll('"', "&quot;")
-                .replaceAll("'", "&#39;");
-        }
-
-        function renderRegistry() {
-            const entries = Object.entries(state.registry)
-                .sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
-
-            registryCount.textContent = `${entries.length} saved`;
-
-            if (!entries.length) {
-                registryHelper.textContent = "Give each board a friendly name so the screens can say \"Violin 1 just played\" instead of a long serial number. Everything is saved locally on this laptop. Import and export use the shared registry.json file.";
-                registryList.innerHTML = '<div class="empty-state">No micro:bits saved yet. Add a serial number and a friendly name to get the room ready for visitors.</div>';
-                return;
-            }
-
-            registryHelper.textContent = "Tip: friendly names like Baton, Violin 1, or Station A make the big-screen callouts easy for visitors to follow.";
-            registryList.innerHTML = entries.map(([serial, label]) => `
-                <div class="registry-item">
-                    <div>
-                        <strong>${escapeHtml(label)}</strong>
-                        <span>${escapeHtml(serial)}</span>
-                    </div>
-                    <button class="delete-btn" type="button" data-serial="${escapeHtml(serial)}">Remove</button>
-                </div>
-            `).join("");
-        }
-
-        function downloadRegistry() {
-            const blob = new Blob([JSON.stringify(state.registry, null, 2)], { type: "application/json" });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = "registry.json";
-            link.click();
-            setTimeout(() => URL.revokeObjectURL(link.href), 250);
-        }
-
-        registryForm.addEventListener("submit", event => {
-            event.preventDefault();
-            const serial = serialInput.value.trim();
-            const label = labelInput.value.trim();
-
-            if (!isValidMicrobitSerial(serial)) {
-                registryHelper.textContent = "That doesn't look like a micro:bit serial number yet — try a whole number only.";
-                serialInput.focus();
-                return;
-            }
-
-            if (!label) {
-                registryHelper.textContent = "Add a friendly name (like Violin 1 or Station A) so the big screen can call it out clearly.";
-                labelInput.focus();
-                return;
-            }
-
-            state.registry[serial] = label;
-            saveRegistry();
-            renderRegistry();
-            registryForm.reset();
-            serialInput.focus();
-        });
-
-        registryList.addEventListener("click", event => {
-            const button = event.target.closest(".delete-btn");
-            if (!button) return;
-            delete state.registry[button.dataset.serial];
-            saveRegistry();
-            renderRegistry();
-        });
-
-        exportRegistryBtn.addEventListener("click", () => {
-            downloadRegistry();
-        });
-
-        clearRegistryBtn.addEventListener("click", () => {
-            state.registry = {};
-            saveRegistry();
-            renderRegistry();
-        });
-
-        importRegistryBtn.addEventListener("click", () => {
-            registryFileInput.click();
-        });
-
-        registryFileInput.addEventListener("change", async event => {
-            const [file] = event.target.files || [];
-            if (!file) return;
-
-            try {
-                const text = await file.text();
-                const parsed = JSON.parse(text);
-                state.registry = normalizeRegistryShape(parsed);
-                saveRegistry();
-                renderRegistry();
-            } catch (error) {
-                registryHelper.textContent = "Hmm — that file didn't look like a TechFest registry.json. Double-check the file and try again.";
-            } finally {
-                registryFileInput.value = "";
-            }
-        });
-
-        renderRegistry();
-    </script>
 </body>
 </html>
