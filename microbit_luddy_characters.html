@@ -39,9 +39,8 @@
             color: var(--ink);
             font-family: "IBM Plex Sans", sans-serif;
             background:
-                radial-gradient(circle at top left, rgba(153, 0, 0, 0.10), transparent 26%),
-                radial-gradient(circle at 90% 18%, rgba(214, 176, 106, 0.18), transparent 24%),
-                linear-gradient(135deg, #f2ebe3 0%, #f7f3ee 48%, #efe6da 100%);
+                radial-gradient(circle at 78% 16%, rgba(255, 229, 143, 0.56), transparent 10%),
+                linear-gradient(180deg, #8fd3f4 0%, #c8efff 34%, #45a4dc 35%, #1673a9 61%, #efd6a2 62%, #efd6a2 100%);
         }
 
         body::before {
@@ -49,12 +48,12 @@
             position: fixed;
             inset: 0;
             pointer-events: none;
-            opacity: 0.42;
+            opacity: 0.36;
             background:
-                linear-gradient(rgba(153, 0, 0, 0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(153, 0, 0, 0.035) 1px, transparent 1px);
-            background-size: 32px 32px;
-            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 90%);
+                radial-gradient(circle at 15% 12%, rgba(255, 255, 255, 0.55), transparent 14%),
+                radial-gradient(circle at 72% 22%, rgba(255, 255, 255, 0.22), transparent 18%),
+                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 18px);
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 96%);
         }
 
         .nav {
@@ -81,25 +80,29 @@
 
         .page {
             min-height: 100vh;
-            display: grid;
-            grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-            gap: 18px;
-            padding: 88px 18px 18px;
+            position: relative;
+            padding: 0;
         }
 
-        .panel,
-        .stage {
+        .panel {
             border: 1px solid var(--panel-border);
             border-radius: var(--radius-panel);
-            background: var(--panel);
+            background: rgba(255, 251, 246, 0.72);
             backdrop-filter: blur(14px);
             box-shadow: 0 24px 60px var(--shadow);
             overflow: hidden;
         }
 
         .panel {
+            position: fixed;
+            top: 88px;
+            left: 18px;
+            z-index: 18;
+            width: min(390px, calc(100vw - 36px));
+            max-height: calc(100vh - 106px);
             display: grid;
             grid-template-rows: auto auto auto 1fr;
+            overflow: auto;
         }
 
         .section {
@@ -365,30 +368,44 @@
         }
 
         .stage {
-            display: grid;
-            grid-template-rows: auto 1fr;
-            min-height: calc(100vh - 36px);
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            overflow: hidden;
         }
 
         .stage-header {
+            position: absolute;
+            top: 88px;
+            right: 18px;
+            z-index: 10;
             display: flex;
             justify-content: space-between;
             gap: 12px;
             align-items: center;
-            padding: 18px 20px;
-            border-bottom: 1px solid rgba(118, 87, 87, 0.10);
+            width: min(580px, calc(100vw - 460px));
+            padding: 16px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 22px;
             background:
-                linear-gradient(135deg, rgba(153, 0, 0, 0.06), rgba(214, 176, 106, 0.08));
+                linear-gradient(135deg, rgba(255, 255, 255, 0.42), rgba(247, 245, 237, 0.18));
+            box-shadow: 0 18px 44px rgba(27, 74, 104, 0.16);
+            backdrop-filter: blur(16px);
         }
 
         .stage-header h2 {
-            font-size: 1.15rem;
+            font-size: 1.2rem;
             font-weight: 700;
+            color: #12486a;
         }
 
         .stage-subtle {
             margin-top: 4px;
-            color: var(--ink-soft);
+            color: rgba(18, 72, 106, 0.82);
             font-size: 0.92rem;
         }
 
@@ -405,9 +422,9 @@
             gap: 8px;
             padding: 9px 12px;
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.68);
-            border: 1px solid rgba(118, 87, 87, 0.10);
-            color: var(--ink);
+            background: rgba(255, 255, 255, 0.62);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: #12486a;
             font-size: 0.86rem;
             font-weight: 600;
         }
@@ -427,26 +444,45 @@
 
         #viz {
             width: 100%;
-            height: 100%;
-            min-height: 640px;
+            height: 100vh;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 78% 16%, rgba(255, 232, 153, 0.96), rgba(255, 232, 153, 0.08) 11%, transparent 16%),
+                linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.06) 28%, transparent 32%),
+                linear-gradient(180deg, #92d7f7 0%, #d2f3ff 33%, #49a7dc 34%, #1d7db4 57%, #2d8fc0 63%, #f1d39b 64%, #e9c884 100%);
+            background-repeat: no-repeat;
         }
 
         @media (max-width: 1080px) {
-            .page {
-                grid-template-columns: 1fr;
-            }
-
-            .stage {
-                min-height: 70vh;
+            .panel {
+                width: min(360px, calc(100vw - 32px));
             }
 
             .stage-header {
+                width: min(420px, calc(100vw - 32px));
+            }
+        }
+
+        @media (max-width: 760px) {
+            .stage-header {
+                top: 86px;
+                left: 12px;
+                right: 12px;
+                width: auto;
                 align-items: flex-start;
                 flex-direction: column;
             }
 
             .pill-row {
                 justify-content: flex-start;
+            }
+
+            .panel {
+                top: auto;
+                bottom: 12px;
+                left: 12px;
+                width: calc(100vw - 24px);
+                max-height: 42vh;
             }
         }
     </style>
@@ -545,8 +581,8 @@
         <section class="stage">
             <div class="stage-header">
                 <div>
-                    <h2>The Commons</h2>
-                    <p class="stage-subtle">Each little character below is someone in the room with a micro:bit. Tilt yours and see which one moves.</p>
+                    <h2>The Beach</h2>
+                    <p class="stage-subtle">The whole world is now a sunny beach. Tilt, aim, and shoot to see which beach critter is yours.</p>
                 </div>
                 <div class="pill-row">
                     <div class="pill"><span class="dot" id="liveDot"></span><span id="connectionLabel">Hub offline</span></div>
@@ -1299,11 +1335,12 @@
             return {
                 animationDurationUpdate: 260,
                 animationEasingUpdate: "cubicOut",
+                backgroundColor: "transparent",
                 grid: {
-                    left: 64,
-                    right: 64,
-                    top: 48,
-                    bottom: 56
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    bottom: 0
                 },
                 tooltip: {
                     trigger: "item",
@@ -1315,6 +1352,19 @@
                     },
                     formatter(params) {
                         const meta = params.data.meta;
+                        if (!meta?.label && meta?.ownerId) {
+                            return `
+                                <strong>Bubble Shot</strong><br/>
+                                Fired by: ${escapeHtml(displayNameFor(meta.ownerId))}<br/>
+                                Flight life: ${Math.round(meta.life)}
+                            `;
+                        }
+                        if (!meta?.label && meta?.fragments) {
+                            return `
+                                <strong>Beach Pop</strong><br/>
+                                Bubble burst in the surf
+                            `;
+                        }
                         const badges = [
                             meta.btnA ? "A" : "",
                             meta.btnB ? "B" : "",
@@ -1332,65 +1382,49 @@
                     }
                 },
                 xAxis: {
+                    show: false,
                     min: -1100,
-                    max: 1100,
-                    name: "west/east tilt",
-                    nameLocation: "middle",
-                    nameGap: 34,
-                    splitNumber: 5,
-                    axisLine: { lineStyle: { color: "rgba(101, 84, 84, 0.45)" } },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: "#705b5b",
-                        fontFamily: "IBM Plex Mono, monospace"
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: "rgba(153, 0, 0, 0.07)",
-                            type: "dashed"
-                        }
-                    }
+                    max: 1100
                 },
                 yAxis: {
+                    show: false,
                     min: -1100,
-                    max: 1100,
-                    name: "forward/back tilt",
-                    nameLocation: "middle",
-                    nameGap: 46,
-                    splitNumber: 5,
-                    axisLine: { lineStyle: { color: "rgba(101, 84, 84, 0.45)" } },
-                    axisTick: { show: false },
-                    axisLabel: {
-                        color: "#705b5b",
-                        fontFamily: "IBM Plex Mono, monospace"
-                    },
-                    splitLine: {
-                        lineStyle: {
-                            color: "rgba(153, 0, 0, 0.07)",
-                            type: "dashed"
-                        }
-                    }
+                    max: 1100
                 },
                 graphic: [
                     {
-                        type: "text",
-                        left: 76,
-                        top: 28,
+                        type: "circle",
+                        left: "76%",
+                        top: "12%",
+                        silent: true,
+                        shape: {
+                            r: 62
+                        },
                         style: {
-                            text: "LUDDY CHARACTER FIELD",
-                            font: "700 12px IBM Plex Sans",
-                            fill: "#990000",
-                            letterSpacing: 4
+                            fill: "rgba(255, 229, 143, 0.72)",
+                            shadowBlur: 40,
+                            shadowColor: "rgba(255, 211, 107, 0.34)"
                         }
                     },
                     {
                         type: "text",
-                        right: 78,
-                        bottom: 24,
+                        left: 36,
+                        top: 128,
                         style: {
-                            text: "IU crimson + warm sandstone palette",
-                            font: "500 12px IBM Plex Sans",
-                            fill: "#705b5b"
+                            text: "MICRO:BIT BEACH",
+                            font: "700 13px IBM Plex Sans",
+                            fill: "rgba(18, 72, 106, 0.78)",
+                            letterSpacing: 3
+                        }
+                    },
+                    {
+                        type: "text",
+                        right: 34,
+                        bottom: 28,
+                        style: {
+                            text: "Aim with A/B and pop bubbles across the shore",
+                            font: "600 12px IBM Plex Sans",
+                            fill: "rgba(18, 72, 106, 0.68)"
                         }
                     }
                 ],
