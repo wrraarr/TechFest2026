@@ -404,7 +404,8 @@
             { usbVendorId: 0x0D28 }
         ];
         const MAX_VISIBLE_NODES = 8;
-        const RAINBOW = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"];
+        const RAINBOW = ["#fecdd3", "#fda4af", "#fca5a5", "#fbcfe8", "#f9a8d4", "#f5d0fe", "#e9d5ff", "#d8b4fe", "#c4b5fd", "#a5b4fc", "#bfdbfe", "#93c5fd", "#a5f3fc", "#67e8f9", "#99f6e4", "#5eead4", "#bbf7d0", "#86efac", "#bef264", "#d9f99d", "#fef08a", "#fde68a", "#fdba74", "#fed7aa", "#fca5a5"]
+        // ["#ef4444", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#3b82f6", "#8b5cf6", "#ec4899"];
 
         const state = {
             nodes: new Map(),
@@ -808,10 +809,10 @@
                 node.velocityY = 0;
             }
             if (patch.penGrow) {
-                node.penScale = clamp(node.penScale + 0.2, 0.5, 4);
+                node.penScale = clamp(node.penScale + 0.2, 0.25, 20);
             }
             if (patch.penShrink) {
-                node.penScale = clamp(node.penScale - 0.2, 0.5, 4);
+                node.penScale = clamp(node.penScale - 0.2, 0.25, 20);
             }
             if (patch.penReset) {
                 node.penScale = 1;

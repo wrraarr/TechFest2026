@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zombie Outbreak · Luddy TechFest 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #ebefe7;
+            --ink-soft: rgba(235, 239, 231, 0.76);
+            --panel: rgba(12, 21, 18, 0.76);
+            --panel-line: rgba(196, 223, 166, 0.16);
+            --toxic: #95ff73;
+            --toxic-deep: #4ab12d;
+            --ember: #ffb36d;
+            --danger: #ff5d5d;
+            --sky-top: #101a2c;
+            --sky-bottom: #20345d;
+            --fog: rgba(207, 235, 255, 0.06);
+            --shadow: rgba(0, 0, 0, 0.34);
+            --radius-panel: 18px;
+            --radius-card: 12px;
+            --radius-slot: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "IBM Plex Sans", sans-serif;
+            background:
+                radial-gradient(circle at 76% 16%, rgba(246, 245, 194, 0.22), transparent 10%),
+                radial-gradient(circle at 18% 24%, rgba(149, 255, 115, 0.08), transparent 20%),
+                linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 42%, #1a2f22 70%, #0f1510 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 50% 62%, rgba(228, 255, 223, 0.05), transparent 30%),
+                repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 32px);
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.9), transparent 96%);
+            opacity: 0.5;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .nav {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 40;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .nav a {
+            padding: 10px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.10);
+            background: rgba(10, 14, 16, 0.62);
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+            font-size: 0.95rem;
+            font-weight: 700;
+            backdrop-filter: blur(12px);
+        }
+
+        .nav-lockup {
+            display: flex !important;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 14px 6px 10px !important;
+        }
+
+        .nav-lockup img {
+            display: block;
+            height: 30px;
+            width: auto;
+        }
+
+        .nav-lockup .nav-lockup-label {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.64rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(235, 239, 231, 0.7);
+            line-height: 1.2;
+            max-width: 11ch;
+        }
+
+        .page {
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .panel {
+            position: fixed;
+            top: 84px;
+            left: 16px;
+            z-index: 22;
+            width: min(390px, calc(100vw - 32px));
+            max-height: calc(100vh - 100px);
+            display: grid;
+            grid-template-rows: auto auto auto 1fr;
+            border: 1px solid var(--panel-line);
+            border-radius: var(--radius-panel);
+            background: var(--panel);
+            box-shadow: 0 26px 70px var(--shadow);
+            backdrop-filter: blur(16px);
+            overflow: auto;
+        }
+
+        .section {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(196, 223, 166, 0.10);
+        }
+
+        .section:last-child {
+            border-bottom: 0;
+        }
+
+        .eyebrow {
+            margin: 0 0 10px;
+            color: var(--toxic);
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+        }
+
+        h1,
+        h2,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            font-family: "Newsreader", serif;
+            font-size: clamp(2.2rem, 4vw, 3.5rem);
+            line-height: 0.92;
+            letter-spacing: -0.05em;
+            max-width: 10ch;
+        }
+
+        .lede {
+            margin-top: 14px;
+            color: var(--ink-soft);
+            line-height: 1.58;
+            max-width: 36ch;
+        }
+
+        .brand-shell {
+            display: grid;
+            gap: 10px;
+            margin: 18px 0 0;
+        }
+
+        .brand-slot {
+            padding: 14px 16px;
+            border-radius: var(--radius-slot);
+            border: 1px dashed rgba(149, 255, 115, 0.22);
+            background: linear-gradient(145deg, rgba(22, 31, 28, 0.82), rgba(10, 14, 13, 0.9));
+        }
+
+        .brand-slot strong,
+        .brand-slot span {
+            display: block;
+        }
+
+        .brand-slot strong {
+            color: var(--toxic);
+            font-size: 0.74rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .brand-slot span {
+            margin-top: 10px;
+            color: var(--ink-soft);
+            line-height: 1.5;
+            font-size: 0.94rem;
+        }
+
+        .brand-slot.lockup-slot-filled {
+            border-style: solid;
+            padding: 16px 18px;
+        }
+
+        .brand-slot.lockup-slot-filled img {
+            display: block;
+            width: 100%;
+            max-width: 260px;
+            height: auto;
+            filter: brightness(1.04);
+        }
+
+        .button-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        button {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            padding: 11px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+        }
+
+        button.primary {
+            color: #081108;
+            background: linear-gradient(135deg, var(--toxic), #d8ff7a);
+        }
+
+        button.secondary {
+            color: var(--ink);
+            background: rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .status-grid,
+        .mini-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .stat,
+        .mini-card {
+            padding: 14px;
+            border-radius: var(--radius-card);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(7, 11, 10, 0.28));
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .stat-label,
+        .mini-label {
+            color: rgba(235, 239, 231, 0.58);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+        }
+
+        .stat-value {
+            margin-top: 8px;
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .mini-value {
+            margin-top: 6px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.92rem;
+            font-weight: 500;
+        }
+
+        .legend {
+            display: grid;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .legend-item {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            color: var(--ink-soft);
+            line-height: 1.45;
+        }
+
+        .swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            margin-top: 5px;
+            flex: 0 0 auto;
+        }
+
+        .registry-list {
+            display: grid;
+            gap: 10px;
+            max-height: 260px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .registry-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: var(--radius-card);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .registry-meta strong,
+        .registry-meta span {
+            display: block;
+        }
+
+        .registry-meta strong {
+            font-size: 0.95rem;
+        }
+
+        .registry-meta span {
+            margin-top: 3px;
+            color: rgba(235, 239, 231, 0.56);
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.78rem;
+        }
+
+        .helper {
+            color: var(--ink-soft);
+            line-height: 1.5;
+        }
+
+        .stage {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .stage-header {
+            position: absolute;
+            top: 84px;
+            right: 16px;
+            z-index: 12;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            width: min(620px, calc(100vw - 454px));
+            padding: 16px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 22px;
+            background: linear-gradient(135deg, rgba(11, 19, 20, 0.58), rgba(20, 30, 25, 0.26));
+            box-shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+            backdrop-filter: blur(16px);
+        }
+
+        .stage-header h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #f0f4eb;
+        }
+
+        .stage-subtle {
+            margin-top: 4px;
+            color: rgba(235, 239, 231, 0.76);
+            font-size: 0.92rem;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f0f4eb;
+            font-size: 0.86rem;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: #726364;
+            box-shadow: 0 0 0 5px rgba(114, 99, 100, 0.16);
+        }
+
+        .dot.live {
+            background: var(--toxic);
+            box-shadow: 0 0 0 5px rgba(149, 255, 115, 0.20);
+        }
+
+        #viz {
+            width: 100%;
+            height: 100vh;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 76% 15%, rgba(247, 248, 211, 0.35), rgba(247, 248, 211, 0.02) 8%, transparent 12%),
+                radial-gradient(circle at 10% 74%, rgba(69, 112, 75, 0.24), transparent 18%),
+                radial-gradient(circle at 88% 78%, rgba(87, 129, 79, 0.20), transparent 20%),
+                linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 26%),
+                linear-gradient(180deg, #0f1a2c 0%, #1d3158 37%, #293021 67%, #111611 100%);
+            background-repeat: no-repeat;
+        }
+
+        @media (max-width: 1080px) {
+            .panel {
+                width: min(360px, calc(100vw - 32px));
+            }
+
+            .stage-header {
+                width: min(440px, calc(100vw - 32px));
+            }
+        }
+
+        @media (max-width: 760px) {
+            .nav-lockup .nav-lockup-label {
+                display: none;
+            }
+
+            .stage-header {
+                top: 84px;
+                left: 12px;
+                right: 12px;
+                width: auto;
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .pill-row {
+                justify-content: flex-start;
+            }
+
+            .panel {
+                top: auto;
+                bottom: 12px;
+                left: 12px;
+                width: calc(100vw - 24px);
+                max-height: 44vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav" aria-label="Primary">
+        <a href="index.html" class="nav-lockup" aria-label="Luddy TechFest home">
+            <img src="luddy_lockup_WEB_h1.png" alt="Luddy School of Informatics, Computing, and Engineering">
+            <span class="nav-lockup-label">TechFest 2026</span>
+        </a>
+        <a href="index.html">Home</a>
+        <a href="microbit_zombie_outbreak.html">Zombie Game</a>
+        <a href="microbit_luddy_characters.html">Characters</a>
+        <a href="microbit_drawing_canvas.html">Sketch Pad</a>
+        <a href="control_worksheet.html">Worksheet</a>
+    </nav>
+
+    <main class="page">
+        <aside class="panel">
+            <section class="section">
+                <p class="eyebrow">Luddy TechFest · Zombie Protocol</p>
+                <h1>Zombie Outbreak</h1>
+                <p class="lede">Each node starts as a normal survivor. Click one person in the world to infect them and begin the outbreak. Infected players still control their own zombie body, and one extra zombie bot wanders the field slowly and badly. Survivors can move, rotate their bubble shooter, fire at zombies, and duck into houses that grant 10 seconds of safety.</p>
+                <div class="brand-shell">
+                    <div class="brand-slot lockup-slot-filled">
+                        <img src="luddy_lockup_WEB_h1.png" alt="Luddy School of Informatics, Computing, and Engineering">
+                    </div>
+                    <div class="brand-slot">
+                        <strong>Protocol Rules</strong>
+                        <span>`g=5/6/3/4/1` moves or stops, `a=1` rotates clockwise, `a=2` rotates counterclockwise, and `a=3` shoots. Infected player nodes are still controlled by their own micro:bit. JSON packets with matching fields work too.</span>
+                    </div>
+                </div>
+                <div class="button-row">
+                    <button class="primary" id="connectBtn" type="button">Connect Hub</button>
+                    <button class="secondary" id="simulateBtn" type="button">Start Demo</button>
+                    <button class="secondary" id="resetBtn" type="button">Reset Game</button>
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="status-grid">
+                    <div class="stat">
+                        <div class="stat-label">Survivors</div>
+                        <div class="stat-value" id="survivorCount">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Zombies</div>
+                        <div class="stat-value" id="zombieCount">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Latest Event</div>
+                        <div class="stat-value" id="latestEvent">Waiting</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Stream</div>
+                        <div class="stat-value" id="streamState">Offline</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section">
+                <div class="mini-grid">
+                    <div class="mini-card">
+                        <div class="mini-label">Tilt</div>
+                        <div class="mini-value">move survivor</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-label">A (1)</div>
+                        <div class="mini-value">rotate shooter right</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-label">B (2)</div>
+                        <div class="mini-value">rotate shooter left</div>
+                    </div>
+                    <div class="mini-card">
+                        <div class="mini-label">A (3)</div>
+                        <div class="mini-value">shoot cure bubble</div>
+                    </div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item"><span class="swatch" style="background: #9ed6ff;"></span><span>Blue survivors are still human and can fire cure bubbles.</span></div>
+                    <div class="legend-item"><span class="swatch" style="background: #95ff73;"></span><span>Green figures are infected zombies. Player zombies still move with their own micro:bit.</span></div>
+                    <div class="legend-item"><span class="swatch" style="background: #f2d6a2;"></span><span>Small houses are safe havens. Stepping inside gives a survivor 10 seconds of protection.</span></div>
+                    <div class="legend-item"><span class="swatch" style="background: #ffb36d;"></span><span>The bot zombie is intentionally slow and clumsy. Golden bursts mean a zombie was cured back into a survivor.</span></div>
+                </div>
+            </section>
+
+            <section class="section">
+                <p class="eyebrow">Who's On The Field</p>
+                <div class="registry-list" id="registryList"></div>
+                <p class="helper" id="lastPacket" style="margin-top: 14px;">Click a survivor to seed the outbreak. One slow bot zombie is already roaming.</p>
+            </section>
+        </aside>
+
+        <section class="stage">
+            <div class="stage-header">
+                <div>
+                    <h2>Outbreak Grounds</h2>
+                    <p class="stage-subtle">Click any survivor to infect them. Zombie players still drive themselves, one slow bot wanders the field, and houses grant survivors 10 seconds of safety.</p>
+                </div>
+                <div class="pill-row">
+                    <div class="pill"><span class="dot" id="liveDot"></span><span id="connectionLabel">Hub offline</span></div>
+                    <div class="pill"><span>Signal</span><span id="packetMode">JSON or pipe</span></div>
+                </div>
+            </div>
+            <div id="viz"></div>
+        </section>
+    </main>
+
+    <script>
+        const REGISTRY_STORAGE_KEY = "microbit-device-registry";
+        const REGISTRY_FILE_PATH = "registry.json";
+        const DEMO_IDS = ["SIM-1", "SIM-2", "SIM-3", "SIM-4", "SIM-5", "SIM-6"];
+        const BOT_ZOMBIE_ID = "BOT-Z1";
+        const FIELD_LIMIT = 980;
+        const SHOOTER_TURN_STEP = Math.PI / 8;
+        const CONTACT_RADIUS = 52;
+        const SAFE_HAVEN_DURATION = 10000;
+        const MICROBIT_USB_FILTERS = [{ usbVendorId: 0x0D28 }];
+        const SAFE_HAVENS = [
+            { id: "house-nw", x: -690, y: 620, width: 180, height: 150, color: "#a96e52" },
+            { id: "house-ne", x: 700, y: 590, width: 170, height: 140, color: "#7f9465" },
+            { id: "house-s", x: 40, y: -700, width: 210, height: 160, color: "#8d6ea7" }
+        ];
+
+        const SURVIVOR_PALETTES = [
+            { body: "#9ed6ff", shirt: "#d7f0ff", outline: "#3b6e97", accent: "#f6a23d", glow: "rgba(158, 214, 255, 0.20)" },
+            { body: "#ffca9b", shirt: "#fff0df", outline: "#8f5b38", accent: "#e84b4b", glow: "rgba(255, 202, 155, 0.18)" },
+            { body: "#d9c2ff", shirt: "#f3e9ff", outline: "#6d57a6", accent: "#ffd65a", glow: "rgba(217, 194, 255, 0.18)" },
+            { body: "#8de1be", shirt: "#e5fff4", outline: "#2f7a61", accent: "#ff8d5c", glow: "rgba(141, 225, 190, 0.20)" }
+        ];
+
+        const state = {
+            chart: null,
+            nodes: new Map(),
+            registry: {},
+            projectiles: [],
+            effects: [],
+            simulationRunning: false,
+            simulationTimer: null,
+            renderTimer: null,
+            latestEvent: "Waiting",
+            serial: {
+                port: null,
+                reader: null,
+                inputDone: null,
+                keepReading: false
+            }
+        };
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function mapRange(value, inMin, inMax, outMin, outMax) {
+            const ratio = (value - inMin) / (inMax - inMin || 1);
+            return outMin + ratio * (outMax - outMin);
+        }
+
+        function normalizeAngle(angle) {
+            const fullTurn = Math.PI * 2;
+            return ((angle % fullTurn) + fullTurn) % fullTurn;
+        }
+
+        function normalizeBoolean(value) {
+            if (typeof value === "boolean") return value;
+            if (typeof value === "number") return value !== 0;
+            if (typeof value === "string") return value === "1" || value.toLowerCase() === "true";
+            return false;
+        }
+
+        function getElement(id) {
+            return document.getElementById(id);
+        }
+
+        function setText(id, value) {
+            const element = getElement(id);
+            if (element) element.textContent = value;
+        }
+
+        function loadRegistry() {
+            try {
+                const raw = window.localStorage.getItem(REGISTRY_STORAGE_KEY);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === "object" ? parsed : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveRegistry() {
+            window.localStorage.setItem(REGISTRY_STORAGE_KEY, JSON.stringify(state.registry));
+        }
+
+        function normalizeRegistryShape(parsed) {
+            const candidate = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+                ? (parsed.registry && typeof parsed.registry === "object" && !Array.isArray(parsed.registry) ? parsed.registry : parsed)
+                : {};
+
+            return Object.fromEntries(
+                Object.entries(candidate)
+                    .filter(([serial, label]) => isValidMicrobitSerial(serial) && typeof label === "string" && label.trim())
+                    .map(([serial, label]) => [serial, label.trim()])
+            );
+        }
+
+        async function loadRegistryFromFile() {
+            try {
+                const response = await fetch(`${REGISTRY_FILE_PATH}?v=${Date.now()}`, { cache: "no-store" });
+                if (!response.ok) return {};
+                return normalizeRegistryShape(await response.json());
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function displayNameFor(id) {
+            return state.registry[id] || id;
+        }
+
+        function isValidMicrobitSerial(id) {
+            if (DEMO_IDS.includes(id)) return true;
+            if (!/^[1-9]\d{0,9}$/.test(id)) return false;
+            const numericId = Number(id);
+            return Number.isInteger(numericId) && numericId >= 1 && numericId <= 4294967295;
+        }
+
+        function isAllowedDeviceId(id) {
+            return Boolean(state.registry[id]) || DEMO_IDS.includes(id);
+        }
+
+        function deriveVelocityFromTilt(value) {
+            if (!Number.isFinite(value) || Math.abs(value) < 180) return 0;
+            return clamp(mapRange(value, -2048, 2048, -1, 1), -1, 1);
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function createNode(id) {
+            const seed = Math.abs([...id].reduce((sum, char) => sum + char.charCodeAt(0), 0));
+            const palette = SURVIVOR_PALETTES[seed % SURVIVOR_PALETTES.length];
+            const startX = mapRange((seed % 13) - 6, -6, 6, -540, 540);
+            const startY = mapRange((seed % 11) - 5, -5, 5, -480, 480);
+            return {
+                id,
+                label: displayNameFor(id),
+                x: startX,
+                y: startY,
+                targetX: startX,
+                targetY: startY,
+                velocityX: 0,
+                velocityY: 0,
+                ax: 0,
+                ay: 0,
+                light: 90,
+                sound: 0,
+                compass: 0,
+                btnA: false,
+                btnB: false,
+                touch: false,
+                logo: false,
+                gesture: "idle",
+                shooterAngle: normalizeAngle((seed % 8) * (Math.PI / 4)),
+                infected: false,
+                isBot: false,
+                immuneUntil: 0,
+                flashUntil: 0,
+                pulse: 0,
+                palette,
+                sizeBias: ((seed % 5) - 2) * 2,
+                blinkOffset: seed % 17,
+                botWanderUntil: 0,
+                safeHavenId: null,
+                lastUpdate: performance.now()
+            };
+        }
+
+        function createBotZombie() {
+            const node = createNode(BOT_ZOMBIE_ID);
+            node.label = "Zombie Bot";
+            node.infected = true;
+            node.isBot = true;
+            node.light = 34;
+            node.sound = 24;
+            node.x = mapRange(Math.random(), 0, 1, -FIELD_LIMIT * 0.72, FIELD_LIMIT * 0.72);
+            node.y = mapRange(Math.random(), 0, 1, -FIELD_LIMIT * 0.72, FIELD_LIMIT * 0.72);
+            node.targetX = node.x;
+            node.targetY = node.y;
+            node.pulse = 0.7;
+            node.botWanderUntil = 0;
+            return node;
+        }
+
+        function ensureBotZombie() {
+            if (state.nodes.has(BOT_ZOMBIE_ID)) return state.nodes.get(BOT_ZOMBIE_ID);
+            const bot = createBotZombie();
+            state.nodes.set(BOT_ZOMBIE_ID, bot);
+            return bot;
+        }
+
+        function ensureNode(id) {
+            if (!isAllowedDeviceId(id)) return null;
+            if (state.nodes.has(id)) return state.nodes.get(id);
+            const node = createNode(id);
+            state.nodes.set(id, node);
+            renderRegistryList();
+            return node;
+        }
+
+        function pruneNodes() {
+            for (const id of [...state.nodes.keys()]) {
+                if (id === BOT_ZOMBIE_ID) continue;
+                if (!isAllowedDeviceId(id)) state.nodes.delete(id);
+            }
+        }
+
+        function renderRegistryList() {
+            const list = getElement("registryList");
+            if (!list) return;
+
+            const entries = Object.entries(state.registry)
+                .sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+            const activeDemo = DEMO_IDS.filter(id => state.nodes.has(id)).map(id => [id, displayNameFor(id)]);
+            const combined = [...entries];
+            for (const entry of activeDemo) {
+                if (!combined.some(item => item[0] === entry[0])) combined.push(entry);
+            }
+            if (state.nodes.has(BOT_ZOMBIE_ID)) {
+                combined.push([BOT_ZOMBIE_ID, "Zombie Bot"]);
+            }
+
+            if (!combined.length) {
+                list.innerHTML = '<div class="helper">No saved devices yet. Start the demo or connect the hub to populate the field.</div>';
+                return;
+            }
+
+            list.innerHTML = combined.map(([serial, label]) => {
+                const node = state.nodes.get(serial);
+                const mode = node ? (node.isBot ? "bot zombie" : node.infected ? "zombie" : "survivor") : "saved";
+                return `
+                    <div class="registry-item">
+                        <div class="registry-meta">
+                            <strong>${escapeHtml(label)}</strong>
+                            <span>${escapeHtml(serial)}</span>
+                        </div>
+                        <span class="helper">${escapeHtml(mode)}</span>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        function setConnectionState(connected, label) {
+            const dot = getElement("liveDot");
+            if (dot) dot.classList.toggle("live", connected);
+            setText("connectionLabel", label);
+            setText("streamState", connected ? "Live" : "Offline");
+        }
+
+        function countSurvivors() {
+            return [...state.nodes.values()].filter(node => !node.infected).length;
+        }
+
+        function countZombies() {
+            return [...state.nodes.values()].filter(node => node.infected).length;
+        }
+
+        function updateSummary() {
+            setText("survivorCount", String(countSurvivors()));
+            setText("zombieCount", String(countZombies()));
+            setText("latestEvent", state.latestEvent);
+            renderRegistryList();
+        }
+
+        function addEffect(x, y, tone) {
+            state.effects.push({
+                id: `${tone}-${performance.now()}-${Math.random()}`,
+                x,
+                y,
+                tone,
+                life: 18,
+                maxLife: 18
+            });
+        }
+
+        function getSafeHavenAt(x, y) {
+            return SAFE_HAVENS.find(house =>
+                Math.abs(x - house.x) <= house.width / 2 &&
+                Math.abs(y - house.y) <= house.height / 2
+            ) || null;
+        }
+
+        function stepSafeHavens() {
+            const now = performance.now();
+            for (const node of state.nodes.values()) {
+                if (node.infected) {
+                    node.safeHavenId = null;
+                    continue;
+                }
+
+                const haven = getSafeHavenAt(node.x, node.y);
+                if (!haven) {
+                    node.safeHavenId = null;
+                    continue;
+                }
+
+                if (node.safeHavenId !== haven.id) {
+                    node.safeHavenId = haven.id;
+                    node.immuneUntil = Math.max(node.immuneUntil, now + SAFE_HAVEN_DURATION);
+                    node.flashUntil = now + 500;
+                    node.pulse = Math.max(node.pulse, 1.1);
+                    state.latestEvent = `${node.label} found safety in a house`;
+                }
+            }
+        }
+
+        function infectNode(node, source = "touch") {
+            const now = performance.now();
+            if (!node || node.infected || node.immuneUntil > now) return false;
+            node.infected = true;
+            node.safeHavenId = null;
+            node.flashUntil = now + 600;
+            node.pulse = 1.3;
+            addEffect(node.x, node.y, "infect");
+            state.latestEvent = `${node.label} infected by ${source}`;
+            updateSummary();
+            return true;
+        }
+
+        function cureNode(node, source = "shot") {
+            if (!node || !node.infected) return false;
+            if (node.isBot) {
+                node.flashUntil = performance.now() + 400;
+                node.pulse = 1.2;
+                addEffect(node.x, node.y, "cure");
+                state.latestEvent = `${node.label} shrugged off ${source}`;
+                updateSummary();
+                return false;
+            }
+            node.infected = false;
+            node.safeHavenId = null;
+            node.immuneUntil = performance.now() + 1400;
+            node.flashUntil = performance.now() + 600;
+            node.pulse = 1.5;
+            addEffect(node.x, node.y, "cure");
+            state.latestEvent = `${node.label} cured by ${source}`;
+            updateSummary();
+            return true;
+        }
+
+        function launchProjectile(node) {
+            if (node.infected) return;
+            const angle = node.shooterAngle;
+            const speed = 62 + Math.random() * 12;
+            const spawnDistance = 30;
+            state.projectiles.push({
+                id: `${node.id}-${performance.now()}-${Math.random()}`,
+                ownerId: node.id,
+                x: node.x + Math.cos(angle) * spawnDistance,
+                y: node.y + Math.sin(angle) * spawnDistance,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 10 + Math.random() * 5,
+                life: 16,
+                color: "#bde6ff",
+                stroke: "#4f87ad"
+            });
+        }
+
+        function findNearestSurvivor(zombie) {
+            let winner = null;
+            let bestDistance = Infinity;
+            for (const node of state.nodes.values()) {
+                if (node.id === zombie.id || node.infected) continue;
+                const dx = node.x - zombie.x;
+                const dy = node.y - zombie.y;
+                const distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    winner = node;
+                }
+            }
+            return winner;
+        }
+
+        function stepBotZombie(node, now) {
+            if (node.botWanderUntil <= now) {
+                node.botWanderUntil = now + 1500 + Math.random() * 2400;
+                const angle = Math.random() * Math.PI * 2;
+                const drift = 70 + Math.random() * 95;
+                node.targetX = clamp(node.x + Math.cos(angle) * drift, -FIELD_LIMIT, FIELD_LIMIT);
+                node.targetY = clamp(node.y + Math.sin(angle) * drift, -FIELD_LIMIT, FIELD_LIMIT);
+            }
+
+            const nearest = findNearestSurvivor(node);
+            if (nearest && Math.random() > 0.86) {
+                node.targetX += (nearest.x - node.x) * 0.08;
+                node.targetY += (nearest.y - node.y) * 0.08;
+            }
+
+            node.targetX = clamp(node.targetX, -FIELD_LIMIT, FIELD_LIMIT);
+            node.targetY = clamp(node.targetY, -FIELD_LIMIT, FIELD_LIMIT);
+        }
+
+        function stepNodeMotion(node) {
+            const now = performance.now();
+            if (node.isBot) {
+                stepBotZombie(node, now);
+            } else {
+                const moveStep = 24;
+                node.targetX = clamp(node.targetX + node.velocityX * moveStep, -FIELD_LIMIT, FIELD_LIMIT);
+                node.targetY = clamp(node.targetY + node.velocityY * moveStep, -FIELD_LIMIT, FIELD_LIMIT);
+            }
+
+            const ease = node.isBot ? 0.07 : 0.16;
+            node.x += (node.targetX - node.x) * ease;
+            node.y += (node.targetY - node.y) * ease;
+            node.pulse *= 0.92;
+
+            if (node.immuneUntil > now && node.pulse < 0.18) {
+                node.pulse = 0.18;
+            }
+        }
+
+        function stepProjectiles() {
+            const nextProjectiles = [];
+            for (const projectile of state.projectiles) {
+                const nextProjectile = {
+                    ...projectile,
+                    x: projectile.x + projectile.vx,
+                    y: projectile.y + projectile.vy,
+                    vx: projectile.vx * 0.92,
+                    vy: projectile.vy * 0.92,
+                    radius: projectile.radius * 0.97,
+                    life: projectile.life - 1
+                };
+
+                if (
+                    nextProjectile.life <= 0 ||
+                    Math.abs(nextProjectile.x) > FIELD_LIMIT * 1.2 ||
+                    Math.abs(nextProjectile.y) > FIELD_LIMIT * 1.2
+                ) {
+                    continue;
+                }
+
+                const hitZombie = [...state.nodes.values()].find(node => {
+                    if (!node.infected) return false;
+                    const dx = nextProjectile.x - node.x;
+                    const dy = nextProjectile.y - node.y;
+                    const hitRadius = CONTACT_RADIUS * 0.72 + nextProjectile.radius * 0.5;
+                    return dx * dx + dy * dy <= hitRadius * hitRadius;
+                });
+
+                if (hitZombie) {
+                    cureNode(hitZombie, displayNameFor(nextProjectile.ownerId));
+                    continue;
+                }
+
+                nextProjectiles.push(nextProjectile);
+            }
+            state.projectiles = nextProjectiles;
+        }
+
+        function stepEffects() {
+            state.effects = state.effects
+                .map(effect => ({ ...effect, life: effect.life - 1 }))
+                .filter(effect => effect.life > 0);
+        }
+
+        function stepZombieContacts() {
+            const now = performance.now();
+            const zombies = [...state.nodes.values()].filter(node => node.infected);
+            const survivors = [...state.nodes.values()].filter(node => !node.infected);
+
+            for (const zombie of zombies) {
+                for (const survivor of survivors) {
+                    if (survivor.immuneUntil > now) continue;
+                    const dx = zombie.x - survivor.x;
+                    const dy = zombie.y - survivor.y;
+                    if ((dx * dx + dy * dy) <= CONTACT_RADIUS * CONTACT_RADIUS) {
+                        infectNode(survivor, zombie.label);
+                    }
+                }
+            }
+        }
+
+        function stepWorld() {
+            for (const node of state.nodes.values()) stepNodeMotion(node);
+            stepSafeHavens();
+            stepProjectiles();
+            stepEffects();
+            stepZombieContacts();
+        }
+
+        function applyNodeUpdate(id, patch) {
+            const node = ensureNode(id);
+            if (!node) return;
+
+            if (Number.isFinite(patch.ax)) node.ax = clamp(Math.round(patch.ax), -2048, 2048);
+            if (Number.isFinite(patch.ay)) node.ay = clamp(Math.round(patch.ay), -2048, 2048);
+            if (Number.isFinite(patch.light)) node.light = clamp(Math.round(patch.light), 0, 255);
+            if (Number.isFinite(patch.sound)) node.sound = clamp(Math.round(patch.sound), 0, 255);
+            if (Number.isFinite(patch.compass)) node.compass = clamp(Math.round(patch.compass), 0, 360);
+            if (typeof patch.btnA === "boolean") node.btnA = patch.btnA;
+            if (typeof patch.btnB === "boolean") node.btnB = patch.btnB;
+            if (typeof patch.touch === "boolean") node.touch = patch.touch;
+            if (typeof patch.logo === "boolean") node.logo = patch.logo;
+            if (typeof patch.gesture === "string" && patch.gesture) node.gesture = patch.gesture;
+
+            if (!node.isBot) {
+                if (patch.rotateClockwise) node.shooterAngle = normalizeAngle(node.shooterAngle - SHOOTER_TURN_STEP);
+                if (patch.rotateCounterClockwise) node.shooterAngle = normalizeAngle(node.shooterAngle + SHOOTER_TURN_STEP);
+
+                if (patch.move === "up") {
+                    node.velocityX = 0;
+                    node.velocityY = -1;
+                }
+                if (patch.move === "down") {
+                    node.velocityX = 0;
+                    node.velocityY = 1;
+                }
+                if (patch.move === "left") {
+                    node.velocityX = -1;
+                    node.velocityY = 0;
+                }
+                if (patch.move === "right") {
+                    node.velocityX = 1;
+                    node.velocityY = 0;
+                }
+                if (patch.stop) {
+                    node.velocityX = 0;
+                    node.velocityY = 0;
+                } else if (!patch.move) {
+                    node.velocityX = deriveVelocityFromTilt(node.ax);
+                    node.velocityY = deriveVelocityFromTilt(node.ay);
+                }
+                if (!node.infected && patch.shootBall) launchProjectile(node);
+            }
+
+            node.label = displayNameFor(id);
+            node.lastUpdate = performance.now();
+            node.pulse = Math.max(node.pulse, 0.85);
+
+            const eventParts = [
+                node.btnA ? "A" : "",
+                node.btnB ? "B" : "",
+                node.touch ? "touch" : "",
+                node.logo ? "logo" : "",
+                node.gesture && node.gesture !== "idle" ? node.gesture : ""
+            ].filter(Boolean);
+
+            state.latestEvent = eventParts.join(" / ") || (node.infected ? "zombie movement" : "survivor movement");
+            updateSummary();
+            renderChart();
+        }
+
+        function decodeStrictHubField(key, numericValue) {
+            if (!Number.isFinite(numericValue)) return null;
+            if (key === "x" && numericValue >= -4096 && numericValue <= 4096) return { ax: numericValue };
+            if (key === "y" && numericValue >= -4096 && numericValue <= 4096) return { ay: numericValue };
+            if (key === "l" && numericValue >= 0 && numericValue <= 255) return { light: numericValue };
+            if (key === "s" && numericValue >= 0 && numericValue <= 255) return { sound: numericValue };
+            if (key === "c" && numericValue >= 0 && numericValue <= 360) return { compass: numericValue };
+            if (key === "a") {
+                if (numericValue === 1) return { btnA: true, btnB: false, gesture: "button-a", rotateClockwise: true };
+                if (numericValue === 2) return { btnA: false, btnB: true, gesture: "button-b", rotateCounterClockwise: true };
+                if (numericValue === 3) return { gesture: "shoot", shootBall: true };
+            }
+            if (key === "g") {
+                if (numericValue === 6) return { move: "down" };
+                if (numericValue === 5) return { move: "up" };
+                if (numericValue === 3) return { move: "left" };
+                if (numericValue === 4) return { move: "right" };
+                if (numericValue === 1) return { stop: true };
+                if (numericValue === 8) return { gesture: "shake" };
+            }
+            return null;
+        }
+
+        function parseHubLine(rawLine) {
+            const line = (rawLine || "").trim();
+            if (!line) return null;
+
+            try {
+                const parsed = JSON.parse(line);
+                if (parsed && parsed.id && isAllowedDeviceId(parsed.id)) {
+                    return {
+                        id: parsed.id,
+                        patch: {
+                            ax: "ax" in parsed ? Number(parsed.ax) : undefined,
+                            ay: "ay" in parsed ? Number(parsed.ay) : undefined,
+                            light: "light" in parsed ? Number(parsed.light) : undefined,
+                            sound: "sound" in parsed ? Number(parsed.sound) : undefined,
+                            compass: "compass" in parsed ? Number(parsed.compass) : undefined,
+                            btnA: "btnA" in parsed ? normalizeBoolean(parsed.btnA) : undefined,
+                            btnB: "btnB" in parsed ? normalizeBoolean(parsed.btnB) : undefined,
+                            touch: "touch" in parsed ? normalizeBoolean(parsed.touch) : undefined,
+                            logo: "logo" in parsed ? normalizeBoolean(parsed.logo) : undefined,
+                            gesture: parsed.gesture || undefined,
+                            shootBall: normalizeBoolean(parsed.shootBall),
+                            rotateClockwise: normalizeBoolean(parsed.rotateClockwise),
+                            rotateCounterClockwise: normalizeBoolean(parsed.rotateCounterClockwise)
+                        }
+                    };
+                }
+            } catch (error) {
+                // Fall back to strict pipe format.
+            }
+
+            const match = /^([A-Za-z0-9-]+)\|([a-z])=(-?\d+)$/.exec(line);
+            if (!match) return null;
+
+            const id = match[1];
+            const key = match[2];
+            const numericValue = Number(match[3]);
+
+            if (!isValidMicrobitSerial(id) || !isAllowedDeviceId(id)) return null;
+            const patch = decodeStrictHubField(key, numericValue);
+            if (!patch) return null;
+            return { id, patch };
+        }
+
+        function handleHubLine(rawLine) {
+            setText("lastPacket", rawLine.trim() || "No packets yet.");
+            const message = parseHubLine(rawLine);
+            if (!message) {
+                state.latestEvent = "bad packet";
+                updateSummary();
+                return;
+            }
+            applyNodeUpdate(message.id, message.patch);
+        }
+
+        class LineBreakTransformer {
+            constructor() {
+                this.buffer = "";
+            }
+            transform(chunk, controller) {
+                this.buffer += chunk;
+                const lines = this.buffer.split(/\r?\n/);
+                this.buffer = lines.pop();
+                lines.forEach(line => controller.enqueue(line));
+            }
+            flush(controller) {
+                if (this.buffer) controller.enqueue(this.buffer);
+            }
+        }
+
+        async function readHubLoop() {
+            try {
+                while (state.serial.keepReading && state.serial.reader) {
+                    const { value, done } = await state.serial.reader.read();
+                    if (done) break;
+                    if (typeof value === "string") handleHubLine(value);
+                }
+            } catch (error) {
+                await disconnectHub();
+            } finally {
+                if (state.serial.keepReading) await disconnectHub();
+            }
+        }
+
+        async function connectHub() {
+            if (!("serial" in navigator)) {
+                setConnectionState(false, "Web Serial unsupported");
+                return;
+            }
+
+            try {
+                const availablePorts = await navigator.serial.getPorts();
+                const knownMicrobitPort = availablePorts.find(port => {
+                    const info = typeof port.getInfo === "function" ? port.getInfo() : {};
+                    return info && info.usbVendorId === 0x0D28;
+                });
+
+                state.serial.port = knownMicrobitPort || await navigator.serial.requestPort({ filters: MICROBIT_USB_FILTERS });
+                await state.serial.port.open({ baudRate: 115200 });
+                const decoder = new TextDecoderStream();
+                state.serial.inputDone = state.serial.port.readable.pipeTo(decoder.writable);
+                state.serial.reader = decoder.readable
+                    .pipeThrough(new TransformStream(new LineBreakTransformer()))
+                    .getReader();
+                state.serial.keepReading = true;
+                setConnectionState(true, "Hub connected");
+                setText("connectBtn", "Disconnect Hub");
+                readHubLoop();
+            } catch (error) {
+                await disconnectHub();
+            }
+        }
+
+        async function disconnectHub() {
+            state.serial.keepReading = false;
+
+            if (state.serial.reader) {
+                try { await state.serial.reader.cancel(); } catch (error) {}
+                try { state.serial.reader.releaseLock(); } catch (error) {}
+                state.serial.reader = null;
+            }
+
+            if (state.serial.inputDone) {
+                try { await state.serial.inputDone; } catch (error) {}
+                state.serial.inputDone = null;
+            }
+
+            if (state.serial.port) {
+                try { await state.serial.port.close(); } catch (error) {}
+                state.serial.port = null;
+            }
+
+            setText("connectBtn", "Connect Hub");
+            setConnectionState(state.simulationRunning, state.simulationRunning ? "Simulation streaming" : "Hub offline");
+        }
+
+        function createDemoPacket(id) {
+            const rotateRoll = Math.random();
+            return JSON.stringify({
+                id,
+                light: Math.round(Math.random() * 255),
+                sound: Math.round(Math.random() * 255),
+                ax: Math.round(mapRange(Math.random(), 0, 1, -1000, 1000)),
+                ay: Math.round(mapRange(Math.random(), 0, 1, -1000, 1000)),
+                compass: Math.round(mapRange(Math.random(), 0, 1, 0, 360)),
+                shootBall: Math.random() > 0.9,
+                rotateClockwise: rotateRoll > 0.88 && rotateRoll <= 0.94,
+                rotateCounterClockwise: rotateRoll > 0.94,
+                gesture: Math.random() > 0.84 ? "wander" : "idle"
+            });
+        }
+
+        function toggleSimulation() {
+            if (state.simulationRunning) {
+                clearInterval(state.simulationTimer);
+                state.simulationTimer = null;
+                state.simulationRunning = false;
+                setText("simulateBtn", "Start Demo");
+                setConnectionState(!!state.serial.port, state.serial.port ? "Hub connected" : "Hub offline");
+                renderChart();
+                return;
+            }
+
+            for (const id of DEMO_IDS) {
+                if (!state.registry[id]) state.registry[id] = id;
+                ensureNode(id);
+            }
+            ensureBotZombie();
+            saveRegistry();
+            renderRegistryList();
+            updateSummary();
+            renderChart();
+
+            state.simulationRunning = true;
+            setText("simulateBtn", "Stop Demo");
+            setConnectionState(true, "Simulation streaming");
+            state.simulationTimer = setInterval(() => {
+                for (const id of DEMO_IDS) handleHubLine(createDemoPacket(id));
+            }, 260);
+        }
+
+        function buildNodeSeriesData() {
+            const now = performance.now();
+            return [...state.nodes.values()].map((node, index) => {
+                const awake = now - node.lastUpdate < 2400;
+                const blink = ((Math.floor(now / 240) + node.blinkOffset) % 18) === 0;
+                const size = 44 + mapRange(node.light, 0, 255, -4, 12) + node.sizeBias;
+                const bob = Math.sin(now / 430 + index) * 8;
+                return {
+                    id: node.id,
+                    name: node.label,
+                    value: [node.x, -node.y, size, bob, node.pulse, awake ? 1 : 0, blink ? 1 : 0],
+                    meta: {
+                        id: node.id,
+                        label: node.label,
+                        infected: node.infected,
+                        isBot: node.isBot,
+                        shooterAngle: node.shooterAngle,
+                        light: node.light,
+                        sound: node.sound,
+                        compass: node.compass,
+                        awake,
+                        blink,
+                        immune: node.immuneUntil > now,
+                        flash: node.flashUntil > now,
+                        palette: node.palette
+                    }
+                };
+            });
+        }
+
+        function buildHouseSeriesData() {
+            return SAFE_HAVENS.map(house => ({
+                value: [house.x, -house.y, house.width, house.height],
+                meta: house
+            }));
+        }
+
+        function buildProjectileSeriesData() {
+            return state.projectiles.map(projectile => ({
+                value: [projectile.x, -projectile.y, projectile.radius, projectile.life],
+                meta: projectile
+            }));
+        }
+
+        function buildEffectSeriesData() {
+            return state.effects.map(effect => ({
+                value: [effect.x, -effect.y, effect.life, effect.maxLife],
+                meta: effect
+            }));
+        }
+
+        function createOption() {
+            stepWorld();
+
+            const houseData = buildHouseSeriesData();
+            const nodeData = buildNodeSeriesData();
+            const projectileData = buildProjectileSeriesData();
+            const effectData = buildEffectSeriesData();
+            const playerZombieCount = [...state.nodes.values()].filter(node => node.infected && !node.isBot).length;
+
+            return {
+                animationDurationUpdate: 220,
+                animationEasingUpdate: "cubicOut",
+                backgroundColor: "transparent",
+                grid: { left: 0, right: 0, top: 0, bottom: 0 },
+                xAxis: { show: false, min: -1100, max: 1100 },
+                yAxis: { show: false, min: -1100, max: 1100 },
+                tooltip: {
+                    trigger: "item",
+                    backgroundColor: "rgba(12, 16, 15, 0.92)",
+                    borderWidth: 0,
+                    textStyle: {
+                        color: "#eef4ea",
+                        fontFamily: "IBM Plex Sans, sans-serif"
+                    },
+                    formatter(params) {
+                        const meta = params.data.meta;
+                        if (!meta?.label && meta?.ownerId) {
+                            return `
+                                <strong>Cure Bubble</strong><br/>
+                                Fired by: ${escapeHtml(displayNameFor(meta.ownerId))}
+                            `;
+                        }
+                        if (!meta?.label && meta?.width) {
+                            return `
+                                <strong>Safe House</strong><br/>
+                                Grants 10 seconds of safety
+                            `;
+                        }
+                        if (!meta?.label && meta?.tone) {
+                            return `
+                                <strong>${meta.tone === "infect" ? "Infection Burst" : "Cure Burst"}</strong>
+                            `;
+                        }
+                        return `
+                            <strong>${escapeHtml(meta.label)}</strong><br/>
+                            Status: ${meta.isBot ? "bot zombie" : meta.infected ? "zombie" : "survivor"}<br/>
+                            Light: ${meta.light}<br/>
+                            Sound: ${meta.sound}<br/>
+                            Compass: ${meta.compass}
+                        `;
+                    }
+                },
+                graphic: [
+                    {
+                        type: "text",
+                        left: 36,
+                        top: 128,
+                        style: {
+                            text: "OUTBREAK FIELD",
+                            font: "700 13px IBM Plex Sans",
+                            fill: "rgba(238, 244, 234, 0.72)",
+                            letterSpacing: 3
+                        }
+                    },
+                    {
+                        type: "text",
+                        left: 36,
+                        bottom: 30,
+                        style: {
+                            text: playerZombieCount === 0 ? "CLICK A SURVIVOR TO CREATE A PLAYER ZOMBIE" : "PLAYER ZOMBIES SPREAD THE BITE WHILE ONE BOT WANDERS",
+                            font: "700 12px IBM Plex Sans",
+                            fill: playerZombieCount === 0 ? "rgba(255, 233, 161, 0.84)" : "rgba(149, 255, 115, 0.78)",
+                            letterSpacing: 2
+                        }
+                    }
+                ],
+                series: [
+                    {
+                        name: "houses",
+                        type: "custom",
+                        coordinateSystem: "cartesian2d",
+                        silent: false,
+                        z: 0,
+                        renderItem(params, api) {
+                            const point = api.coord([api.value(0), api.value(1)]);
+                            const width = api.value(2);
+                            const height = api.value(3);
+                            const meta = houseData[params.dataIndex].meta;
+                            const x = point[0];
+                            const y = point[1];
+                            return {
+                                type: "group",
+                                children: [
+                                    {
+                                        type: "rect",
+                                        shape: {
+                                            x: x - width / 2,
+                                            y: y - height / 2,
+                                            width,
+                                            height: height * 0.68,
+                                            r: 10
+                                        },
+                                        style: {
+                                            fill: meta.color,
+                                            stroke: "rgba(250, 241, 226, 0.7)",
+                                            lineWidth: 2
+                                        }
+                                    },
+                                    {
+                                        type: "polygon",
+                                        shape: {
+                                            points: [
+                                                [x - width * 0.58, y - height * 0.16],
+                                                [x, y - height * 0.72],
+                                                [x + width * 0.58, y - height * 0.16]
+                                            ]
+                                        },
+                                        style: {
+                                            fill: "#f2d6a2",
+                                            stroke: "rgba(99, 61, 31, 0.6)",
+                                            lineWidth: 2
+                                        }
+                                    },
+                                    {
+                                        type: "rect",
+                                        shape: {
+                                            x: x - width * 0.12,
+                                            y: y - height * 0.06,
+                                            width: width * 0.24,
+                                            height: height * 0.24,
+                                            r: 6
+                                        },
+                                        style: {
+                                            fill: "#5d3e2f"
+                                        }
+                                    },
+                                    {
+                                        type: "rect",
+                                        shape: {
+                                            x: x - width * 0.34,
+                                            y: y - height * 0.1,
+                                            width: width * 0.18,
+                                            height: height * 0.16,
+                                            r: 4
+                                        },
+                                        style: {
+                                            fill: "rgba(215, 240, 255, 0.85)"
+                                        }
+                                    },
+                                    {
+                                        type: "rect",
+                                        shape: {
+                                            x: x + width * 0.16,
+                                            y: y - height * 0.1,
+                                            width: width * 0.18,
+                                            height: height * 0.16,
+                                            r: 4
+                                        },
+                                        style: {
+                                            fill: "rgba(215, 240, 255, 0.85)"
+                                        }
+                                    }
+                                ]
+                            };
+                        },
+                        data: houseData
+                    },
+                    {
+                        name: "actors",
+                        type: "custom",
+                        coordinateSystem: "cartesian2d",
+                        encode: { x: 0, y: 1 },
+                        renderItem(params, api) {
+                            const meta = nodeData[params.dataIndex].meta;
+                            const point = api.coord([api.value(0), api.value(1)]);
+                            const size = api.value(2);
+                            const bob = api.value(3);
+                            const pulse = api.value(4);
+                            const awake = api.value(5) === 1;
+                            const blink = api.value(6) === 1;
+                            const x = point[0];
+                            const y = point[1] + bob;
+                            const headRadius = size * 0.28;
+                            const bodyHeight = size * 0.7;
+                            const shooterDx = Math.cos(meta.shooterAngle);
+                            const shooterDy = -Math.sin(meta.shooterAngle);
+                            const outline = meta.infected ? "#8eff6d" : meta.palette.outline;
+                            const haloColor = meta.infected
+                                ? "rgba(149, 255, 115, 0.22)"
+                                : meta.palette.glow;
+                            const bodyFill = meta.infected ? "#6dbc4d" : meta.palette.body;
+                            const shirtFill = meta.infected ? "#34572a" : meta.palette.shirt;
+                            const eyeColor = meta.infected ? "#ff6767" : "#132237";
+                            const labelColor = awake ? "#f0f4eb" : "rgba(240, 244, 235, 0.46)";
+                            const lowerLabel = meta.isBot ? "BOT ZOMBIE" : meta.infected ? "ZOMBIE" : "SURVIVOR";
+
+                            return {
+                                type: "group",
+                                position: [x, y],
+                                children: [
+                                    {
+                                        type: "circle",
+                                        shape: { cx: 0, cy: 0, r: size * 0.86 + pulse * 10 },
+                                        style: {
+                                            fill: haloColor,
+                                            opacity: meta.flash ? 0.95 : 1
+                                        }
+                                    },
+                                    {
+                                        type: "ellipse",
+                                        shape: { cx: 0, cy: size * 0.78, rx: size * 0.34, ry: size * 0.14 },
+                                        style: { fill: "rgba(0, 0, 0, 0.22)" }
+                                    },
+                                    {
+                                        type: "circle",
+                                        shape: { cx: 0, cy: -bodyHeight * 0.44, r: headRadius },
+                                        style: {
+                                            fill: bodyFill,
+                                            stroke: outline,
+                                            lineWidth: meta.infected ? 2.5 : 2
+                                        }
+                                    },
+                                    {
+                                        type: "rect",
+                                        shape: {
+                                            x: -size * 0.25,
+                                            y: -bodyHeight * 0.12,
+                                            width: size * 0.5,
+                                            height: bodyHeight * 0.62,
+                                            r: 12
+                                        },
+                                        style: {
+                                            fill: shirtFill,
+                                            stroke: outline,
+                                            lineWidth: 2
+                                        }
+                                    },
+                                    {
+                                        type: "line",
+                                        shape: {
+                                            x1: -size * 0.08,
+                                            y1: bodyHeight * 0.54,
+                                            x2: -size * 0.18,
+                                            y2: bodyHeight * 0.88
+                                        },
+                                        style: { stroke: outline, lineWidth: 3, lineCap: "round" }
+                                    },
+                                    {
+                                        type: "line",
+                                        shape: {
+                                            x1: size * 0.08,
+                                            y1: bodyHeight * 0.54,
+                                            x2: size * 0.18,
+                                            y2: bodyHeight * 0.88
+                                        },
+                                        style: { stroke: outline, lineWidth: 3, lineCap: "round" }
+                                    },
+                                    {
+                                        type: "line",
+                                        shape: {
+                                            x1: -size * 0.2,
+                                            y1: size * 0.06,
+                                            x2: meta.infected ? -size * 0.44 : -size * 0.36,
+                                            y2: meta.infected ? size * 0.22 : size * 0.18
+                                        },
+                                        style: { stroke: outline, lineWidth: 3, lineCap: "round" }
+                                    },
+                                    {
+                                        type: "line",
+                                        shape: {
+                                            x1: size * 0.2,
+                                            y1: size * 0.06,
+                                            x2: meta.infected ? size * 0.44 : size * 0.36,
+                                            y2: meta.infected ? size * 0.22 : size * 0.18
+                                        },
+                                        style: { stroke: outline, lineWidth: 3, lineCap: "round" }
+                                    },
+                                    blink ? {
+                                        type: "group",
+                                        children: [
+                                            {
+                                                type: "line",
+                                                shape: { x1: -headRadius * 0.52, y1: -bodyHeight * 0.46, x2: -headRadius * 0.12, y2: -bodyHeight * 0.46 },
+                                                style: { stroke: eyeColor, lineWidth: 2, lineCap: "round" }
+                                            },
+                                            {
+                                                type: "line",
+                                                shape: { x1: headRadius * 0.12, y1: -bodyHeight * 0.46, x2: headRadius * 0.52, y2: -bodyHeight * 0.46 },
+                                                style: { stroke: eyeColor, lineWidth: 2, lineCap: "round" }
+                                            }
+                                        ]
+                                    } : {
+                                        type: "group",
+                                        children: [
+                                            {
+                                                type: "circle",
+                                                shape: { cx: -headRadius * 0.34, cy: -bodyHeight * 0.47, r: 3 },
+                                                style: { fill: eyeColor }
+                                            },
+                                            {
+                                                type: "circle",
+                                                shape: { cx: headRadius * 0.34, cy: -bodyHeight * 0.47, r: 3 },
+                                                style: { fill: eyeColor }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        type: "line",
+                                        shape: { x1: -6, y1: -bodyHeight * 0.28, x2: 6, y2: -bodyHeight * 0.28 },
+                                        style: {
+                                            stroke: meta.infected ? "#4c1a1a" : "#132237",
+                                            lineWidth: 2,
+                                            lineCap: "round"
+                                        }
+                                    },
+                                    !meta.infected ? {
+                                        type: "group",
+                                        children: [
+                                            {
+                                                type: "line",
+                                                shape: {
+                                                    x1: 0,
+                                                    y1: -2,
+                                                    x2: shooterDx * (size * 0.46),
+                                                    y2: shooterDy * (size * 0.46) - 2
+                                                },
+                                                style: {
+                                                    stroke: "#d7f0ff",
+                                                    lineWidth: 4,
+                                                    lineCap: "round"
+                                                }
+                                            },
+                                            {
+                                                type: "circle",
+                                                shape: {
+                                                    cx: shooterDx * (size * 0.56),
+                                                    cy: shooterDy * (size * 0.56) - 2,
+                                                    r: 6 + pulse
+                                                },
+                                                style: {
+                                                    fill: "#bfe7ff",
+                                                    stroke: "#4f87ad",
+                                                    lineWidth: 2
+                                                }
+                                            }
+                                        ]
+                                    } : { type: "group", children: [] },
+                                    meta.immune ? {
+                                        type: "circle",
+                                        shape: { cx: 0, cy: 0, r: size * 0.72 + pulse * 6 },
+                                        style: {
+                                            stroke: "rgba(255, 240, 153, 0.82)",
+                                            lineWidth: 2,
+                                            fill: "rgba(0,0,0,0)"
+                                        }
+                                    } : { type: "group", children: [] },
+                                    {
+                                        type: "text",
+                                        style: {
+                                            x: 0,
+                                            y: -bodyHeight * 0.94,
+                                            text: meta.label,
+                                            textAlign: "center",
+                                            textVerticalAlign: "middle",
+                                            font: "700 13px IBM Plex Sans",
+                                            fill: labelColor
+                                        }
+                                    },
+                                    {
+                                        type: "text",
+                                        style: {
+                                            x: 0,
+                                            y: bodyHeight * 1.06,
+                                            text: lowerLabel,
+                                            textAlign: "center",
+                                            textVerticalAlign: "middle",
+                                            font: "700 10px IBM Plex Sans",
+                                            fill: meta.infected ? "#b9ff8d" : "#d8eefb"
+                                        }
+                                    }
+                                ]
+                            };
+                        },
+                        data: nodeData
+                    },
+                    {
+                        name: "bubbles",
+                        type: "custom",
+                        coordinateSystem: "cartesian2d",
+                        silent: true,
+                        z: 2,
+                        renderItem(params, api) {
+                            const point = api.coord([api.value(0), api.value(1)]);
+                            const radius = api.value(2);
+                            const life = api.value(3);
+                            const meta = projectileData[params.dataIndex].meta;
+                            return {
+                                type: "group",
+                                children: [
+                                    {
+                                        type: "circle",
+                                        shape: { cx: point[0], cy: point[1], r: radius + 4 },
+                                        style: { fill: "rgba(255,255,255,0.12)" }
+                                    },
+                                    {
+                                        type: "circle",
+                                        shape: { cx: point[0], cy: point[1], r: radius },
+                                        style: {
+                                            fill: meta.color,
+                                            stroke: meta.stroke,
+                                            lineWidth: Math.max(1.5, life * 0.14)
+                                        }
+                                    }
+                                ]
+                            };
+                        },
+                        data: projectileData
+                    },
+                    {
+                        name: "effects",
+                        type: "custom",
+                        coordinateSystem: "cartesian2d",
+                        silent: true,
+                        z: 1,
+                        renderItem(params, api) {
+                            const point = api.coord([api.value(0), api.value(1)]);
+                            const life = api.value(2);
+                            const maxLife = api.value(3);
+                            const progress = 1 - life / Math.max(maxLife, 1);
+                            const meta = effectData[params.dataIndex].meta;
+                            const stroke = meta.tone === "infect" ? "#95ff73" : "#ffcf7a";
+                            const fill = meta.tone === "infect" ? "rgba(149,255,115,0.18)" : "rgba(255,207,122,0.20)";
+                            return {
+                                type: "group",
+                                children: [
+                                    {
+                                        type: "circle",
+                                        shape: {
+                                            cx: point[0],
+                                            cy: point[1],
+                                            r: 14 + progress * 38
+                                        },
+                                        style: {
+                                            stroke,
+                                            lineWidth: Math.max(2, 6 - progress * 4),
+                                            fill: "rgba(0,0,0,0)",
+                                            opacity: 0.9 - progress * 0.9
+                                        }
+                                    },
+                                    {
+                                        type: "circle",
+                                        shape: {
+                                            cx: point[0],
+                                            cy: point[1],
+                                            r: 6 + progress * 12
+                                        },
+                                        style: {
+                                            fill,
+                                            opacity: 0.8 - progress * 0.8
+                                        }
+                                    }
+                                ]
+                            };
+                        },
+                        data: effectData
+                    }
+                ]
+            };
+        }
+
+        function renderChart() {
+            if (!state.chart) return;
+            state.chart.setOption(createOption(), true);
+            updateSummary();
+        }
+
+        function startRenderLoop() {
+            if (state.renderTimer) clearInterval(state.renderTimer);
+            state.renderTimer = setInterval(() => renderChart(), 140);
+        }
+
+        function infectNodeFromClick(params) {
+            const nodeId = params?.data?.id || params?.data?.meta?.id;
+            if (!nodeId) return;
+            const node = state.nodes.get(nodeId);
+            if (!node || node.infected) return;
+            infectNode(node, "click");
+            renderChart();
+        }
+
+        function initializeChart() {
+            const vizElement = getElement("viz");
+            if (!vizElement) return;
+            state.chart = echarts.init(vizElement, null, { renderer: "svg" });
+            state.chart.on("click", params => {
+                if (params?.seriesName === "actors") infectNodeFromClick(params);
+            });
+            renderChart();
+            window.addEventListener("resize", () => state.chart && state.chart.resize());
+            startRenderLoop();
+        }
+
+        function resetGame() {
+            for (const node of state.nodes.values()) {
+                node.infected = node.isBot;
+                node.immuneUntil = 0;
+                node.flashUntil = 0;
+                node.pulse = 0;
+                node.targetX = node.x;
+                node.targetY = node.y;
+                node.botWanderUntil = 0;
+                node.safeHavenId = null;
+            }
+            state.projectiles = [];
+            state.effects = [];
+            ensureBotZombie();
+            state.latestEvent = "Waiting";
+            setText("lastPacket", "Click a survivor to seed the outbreak. One slow bot zombie is already roaming.");
+            updateSummary();
+            renderChart();
+        }
+
+        const connectBtn = getElement("connectBtn");
+        if (connectBtn) {
+            connectBtn.addEventListener("click", async () => {
+                if (state.serial.port) {
+                    await disconnectHub();
+                } else {
+                    await connectHub();
+                }
+            });
+        }
+
+        const simulateBtn = getElement("simulateBtn");
+        if (simulateBtn) simulateBtn.addEventListener("click", toggleSimulation);
+
+        const resetBtn = getElement("resetBtn");
+        if (resetBtn) resetBtn.addEventListener("click", resetGame);
+
+        if ("serial" in navigator) {
+            navigator.serial.addEventListener("disconnect", async event => {
+                if (state.serial.port && event.target === state.serial.port) {
+                    await disconnectHub();
+                }
+            });
+        }
+
+        async function initializeRegistry() {
+            const fileRegistry = await loadRegistryFromFile();
+            state.registry = { ...fileRegistry, ...state.registry };
+            saveRegistry();
+            pruneNodes();
+            ensureBotZombie();
+            renderRegistryList();
+            updateSummary();
+            renderChart();
+        }
+
+        state.registry = loadRegistry();
+        ensureBotZombie();
+        renderRegistryList();
+        updateSummary();
+        initializeChart();
+        initializeRegistry();
+    </script>
+</body>
+</html>

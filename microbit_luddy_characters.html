@@ -542,6 +542,14 @@
                         <div class="stat-label">Stream</div>
                         <div class="stat-value" id="streamState">Offline</div>
                     </div>
+                    <div class="stat">
+                        <div class="stat-label">Top Score</div>
+                        <div class="stat-value" id="topScore">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Total Pops</div>
+                        <div class="stat-value" id="totalPops">0</div>
+                    </div>
                 </div>
             </section>
 
@@ -758,6 +766,9 @@
                 explosionUntil: 0,
                 respawnAt: 0,
                 invulnerableUntil: 0,
+                score: 0,
+                shotsFired: 0,
+                hits: 0,
                 lastUpdate: performance.now()
             };
         }
@@ -802,7 +813,7 @@
                 <div class="registry-item">
                     <div class="registry-meta">
                         <strong>${escapeHtml(label)}</strong>
-                        <span>${escapeHtml(serial)}</span>
+                        <span>${escapeHtml(serial)}${state.nodes.has(serial) ? ` · ${state.nodes.get(serial).score} pts` : ""}</span>
                     </div>
                     <span class="helper">${state.nodes.has(serial) ? "live" : "saved"}</span>
                 </div>
@@ -831,10 +842,19 @@
             const avgLight = nodes.length
                 ? Math.round(nodes.reduce((sum, node) => sum + node.light, 0) / nodes.length)
                 : 0;
+            const topNode = nodes.reduce((best, node) => {
+                if (!best) return node;
+                if (node.score > best.score) return node;
+                if (node.score === best.score && node.hits > best.hits) return node;
+                return best;
+            }, null);
+            const totalPops = nodes.reduce((sum, node) => sum + node.hits, 0);
 
             setText("activeCount", `${activeNodes.length} active`);
             setText("avgLight", String(avgLight));
             setText("latestEvent", state.latestEvent);
+            setText("topScore", topNode ? `${topNode.label} · ${topNode.score}` : "0");
+            setText("totalPops", String(totalPops));
         }
 
         function stepNodeMotion(node) {
@@ -854,6 +874,7 @@
             const angle = node.shooterAngle;
             const speed = 62 + Math.random() * 10;
             const spawnDistance = 30;
+            node.shotsFired += 1;
             state.projectiles.push({
                 id: `${node.id}-${performance.now()}-${Math.random()}`,
                 x: node.x + Math.cos(angle) * spawnDistance,
@@ -875,10 +896,9 @@
         }
 
         function respawnNode(node) {
-            const offsetX = mapRange(Math.random(), 0, 1, -180, 180);
-            const offsetY = mapRange(Math.random(), 0, 1, -160, 160);
-            node.x = clamp(node.x + offsetX, -FIELD_LIMIT, FIELD_LIMIT);
-            node.y = clamp(node.y + offsetY, -FIELD_LIMIT, FIELD_LIMIT);
+            const respawnMargin = 120;
+            node.x = mapRange(Math.random(), 0, 1, -FIELD_LIMIT + respawnMargin, FIELD_LIMIT - respawnMargin);
+            node.y = mapRange(Math.random(), 0, 1, -FIELD_LIMIT + respawnMargin, FIELD_LIMIT - respawnMargin);
             node.targetX = node.x;
             node.targetY = node.y;
             node.pulse = 1;
@@ -914,13 +934,22 @@
                 fragments
             });
 
+            const owner = projectile?.ownerId ? state.nodes.get(projectile.ownerId) : null;
+            if (owner) {
+                owner.hits += 1;
+                owner.score += 100;
+                owner.pulse = Math.max(owner.pulse, 1.2);
+                state.latestEvent = `${owner.label} popped ${node.label}`;
+            } else {
+                state.latestEvent = `${node.label} exploded`;
+            }
+
             node.explosionUntil = now + 700;
             node.respawnAt = now + 900;
             node.invulnerableUntil = now + 1800;
             node.velocityX = 0;
             node.velocityY = 0;
             node.pulse = 1.4;
-            state.latestEvent = `${node.label} exploded`;
             updateSummary();
             return true;
         }
