@@ -174,6 +174,11 @@
             color: var(--ink);
         }
 
+        .quote-card code {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.88em;
+        }
+
         .section {
             margin-top: 28px;
         }
@@ -233,6 +238,15 @@
             color: var(--muted);
         }
 
+        .timeline-meta {
+            margin: 0 0 8px;
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--crimson);
+        }
+
         .tag-row {
             display: flex;
             flex-wrap: wrap;
@@ -253,6 +267,88 @@
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 16px;
+        }
+
+        .commit-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .commit-card {
+            padding: 18px 20px;
+            border-radius: 22px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.76);
+            box-shadow: var(--shadow);
+        }
+
+        .commit-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .commit-card p {
+            margin: 0 0 10px;
+            line-height: 1.65;
+            color: var(--muted);
+        }
+
+        .commit-card code {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.88em;
+        }
+
+        .compare-grid,
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .compare-card,
+        .media-card {
+            padding: 20px;
+            border-radius: 24px;
+            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, 0.76);
+            box-shadow: var(--shadow);
+        }
+
+        .compare-card h3,
+        .media-card h3 {
+            font-size: 1.18rem;
+            margin-bottom: 8px;
+        }
+
+        .compare-card p,
+        .media-card p {
+            margin: 0 0 10px;
+            line-height: 1.65;
+            color: var(--muted);
+        }
+
+        .compare-card code {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.88em;
+        }
+
+        .media-frame {
+            overflow: hidden;
+            border-radius: 18px;
+            border: 1px solid rgba(22, 50, 79, 0.1);
+            background: rgba(255, 255, 255, 0.94);
+            margin-bottom: 14px;
+        }
+
+        .media-frame img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .media-caption {
+            font-size: 0.92rem;
+            color: var(--muted);
         }
 
         .credit-card {
@@ -281,7 +377,9 @@
 
         @media (max-width: 960px) {
             .hero,
-            .credits {
+            .credits,
+            .compare-grid,
+            .media-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -335,7 +433,7 @@
                 <p class="eyebrow">Saturday, April 11, 2026</p>
                 <h1>The project changed because people walked up and talked to us.</h1>
                 <p class="hero-copy">This page captures the evolution of the Micro:bit Exploration project during Luddy TechFest on Saturday, April 11, 2026. Visitors tested things, noticed rough spots, pitched upgrades, and helped shape what the code became by the end of the day.</p>
-                <p class="hero-copy">Arvin, our 8-year-old helper, wrote down update ideas as people shared them. One of the biggest additions from that live feedback loop was the Zombie game.</p>
+                <p class="hero-copy">Arvin, our 8-year-old helper, wrote down update ideas as people shared them. One of the biggest ideas from that live feedback loop was the Zombie game. The git history shows the idea day on April 11, 2026, and then the committed zombie page landing later on April 13, 2026.</p>
             </article>
 
             <aside class="panel hero-side">
@@ -345,7 +443,11 @@
                 </div>
                 <div class="quote-card">
                     <strong>Arvin's Contribution</strong>
-                    <p>Arvin helped us capture the stream of ideas during the day, and his idea pushed us to build the Zombie Outbreak page as a new game inside the project.</p>
+                    <p>Arvin helped us capture the stream of ideas during the day. His zombie-game idea came out of the April 11 feedback session, and the committed page appeared later in <code>microbit_zombie_outbreak.html</code> on Sunday, April 13, 2026.</p>
+                </div>
+                <div class="quote-card">
+                    <strong>What Git Confirms</strong>
+                    <p>There were eight commits on Saturday, April 11, 2026, starting at 7:19 AM and continuing through 11:50 AM. They touched the home page, orchestra, worksheet, monitor, printout, drawing canvas, and character world.</p>
                 </div>
                 <div class="quote-card">
                     <strong>Why This Page Exists</strong>
@@ -368,8 +470,10 @@
                     <div class="timeline-step">01</div>
                     <div>
                         <h3>The activity got clearer</h3>
-                        <p>Visitors wanted the home page to better explain what participants were actually doing, so we expanded the activity framing with more cards about noticing errors, improving ideas, and making new pages or controllers.</p>
+                        <p class="timeline-meta">7:29 AM commit · <code>index.html</code></p>
+                        <p>Visitors wanted the home page to better explain what participants were actually doing, so we expanded the activity framing with three new cards: noticing what could work better, imagining the next fix or feature, and building the next version.</p>
                         <div class="tag-row">
+                            <span class="tag">D / E / F cards</span>
                             <span class="tag">Better explanation</span>
                             <span class="tag">More welcoming entry point</span>
                             <span class="tag">Visitor-driven wording</span>
@@ -381,8 +485,10 @@
                     <div class="timeline-step">02</div>
                     <div>
                         <h3>The drawing canvas became bigger and more immersive</h3>
-                        <p>People wanted the drawing experience to feel larger, so the motion canvas was pushed toward full-width and taller proportions. That made the sketch station work better as a shared public screen instead of a small widget inside a page.</p>
+                        <p class="timeline-meta">11:02 AM commit · <code>microbit_drawing_canvas.html</code></p>
+                        <p>People wanted the drawing experience to feel larger, so the motion canvas was widened by changing the shell to full width and tightening the workspace padding. That moved the sketch station closer to a public-screen experience instead of a small framed widget.</p>
                         <div class="tag-row">
+                            <span class="tag">Width: 100%</span>
                             <span class="tag">Full-screen feel</span>
                             <span class="tag">Projector-friendly</span>
                             <span class="tag">Shared canvas energy</span>
@@ -394,7 +500,8 @@
                     <div class="timeline-step">03</div>
                     <div>
                         <h3>The character world turned into a game space</h3>
-                        <p>Feedback pushed the character page from a motion demo into a playful arena. Characters got shooting, visible aiming directions, explosions when hit, respawning behavior, and a full-screen beach environment that felt more like a world than a graph.</p>
+                        <p class="timeline-meta">11:24 AM and 11:47 AM commits · <code>microbit_luddy_characters.html</code></p>
+                        <p>Feedback pushed the character page from a motion demo into a playful arena. Git shows the addition of shooter-angle logic, projectile ownership, hit detection, explosions, respawn and invulnerability timing, and then a follow-up conversion of the scene into a full-screen beach world with the old graph framing removed.</p>
                         <div class="tag-row">
                             <span class="tag">Explosions</span>
                             <span class="tag">Aiming controls</span>
@@ -406,12 +513,13 @@
                 <article class="timeline-card">
                     <div class="timeline-step">04</div>
                     <div>
-                        <h3>Randomness made the action more alive</h3>
-                        <p>When people noticed characters were coming back in a predictable way, we changed respawn behavior to feel less centered and more playful. That made the field feel less staged and more dynamic for the next group stepping up.</p>
+                        <h3>The controls were remapped in response to how people were playing</h3>
+                        <p class="timeline-meta">11:47 AM and 11:50 AM commits · <code>microbit_drawing_canvas.html</code> and <code>microbit_luddy_characters.html</code></p>
+                        <p>Another round of same-day edits changed control mappings to better match how people were using the devices. On the drawing canvas, the <code>g</code> movement codes were remapped. On the character page, button presses and shooting directions were tuned again in a quick follow-up pass.</p>
                         <div class="tag-row">
-                            <span class="tag">Random respawn</span>
-                            <span class="tag">Less predictable</span>
-                            <span class="tag">More playful chaos</span>
+                            <span class="tag">Control remap</span>
+                            <span class="tag">Fast iteration</span>
+                            <span class="tag">Follow-up polish</span>
                         </div>
                     </div>
                 </article>
@@ -419,12 +527,13 @@
                 <article class="timeline-card">
                     <div class="timeline-step">05</div>
                     <div>
-                        <h3>Arvin's idea became Zombie Outbreak</h3>
-                        <p>One of the biggest leaps of the day came from Arvin's idea: turn the node system into a zombie game. We built a new page where one person can be infected, zombies spread by touch, survivors can shoot, and the project's micro:bit communication protocol still drives the action.</p>
+                        <h3>The printout and QR handout were added mid-morning</h3>
+                        <p class="timeline-meta">9:51 AM commit · <code>activity_printout.html</code> and <code>index.html</code></p>
+                        <p>Git shows a new print-ready handout landing during the day. That addition gave the station a page with activity copy, participation framing, a site link, and a QR code so people could carry the experience away from the table.</p>
                         <div class="tag-row">
-                            <span class="tag">Arvin's idea</span>
-                            <span class="tag">New game page</span>
-                            <span class="tag">Same micro:bit protocol</span>
+                            <span class="tag">Printout page</span>
+                            <span class="tag">QR code</span>
+                            <span class="tag">Take-home link</span>
                         </div>
                     </div>
                 </article>
@@ -432,14 +541,142 @@
                 <article class="timeline-card">
                     <div class="timeline-step">06</div>
                     <div>
-                        <h3>The zombie game kept evolving with visitors</h3>
-                        <p>Once the zombie idea landed, people kept adding to it. Zombies became player-controlled, a weak random zombie bot was added, and safe-house buildings created ten-second windows of protection. The game became a live example of rapid iteration in response to audience imagination.</p>
+                        <h3>Arvin's zombie idea started on April 11 and became code later</h3>
+                        <p class="timeline-meta">Idea captured on April 11 · committed on April 13 at 9:05 AM</p>
+                        <p>The git record does not show a zombie-game file on Saturday, April 11, 2026. What it does show is a fast-moving day of visitor-driven changes that set the stage for the next leap. Arvin's idea belonged to that April 11 evolution, and the actual <code>microbit_zombie_outbreak.html</code> page was committed later on Sunday, April 13, 2026.</p>
                         <div class="tag-row">
-                            <span class="tag">Player-controlled zombies</span>
-                            <span class="tag">Slow bot zombie</span>
-                            <span class="tag">Safe houses</span>
+                            <span class="tag">Arvin's idea</span>
+                            <span class="tag">April 11 feedback</span>
+                            <span class="tag">April 13 implementation</span>
                         </div>
                     </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">What Git Shows</p>
+                    <h2>A commit-by-commit view of Saturday, April 11</h2>
+                </div>
+                <p>These details come directly from the repository history for Saturday, April 11, 2026. They help anchor the story in the actual sequence of commits.</p>
+            </div>
+
+            <div class="commit-list">
+                <article class="commit-card">
+                    <h3>7:19 AM · “fixed index and ensemble”</h3>
+                    <p>This was the broad morning stabilization pass. It touched <code>index.html</code>, <code>string_ensemble_baton_nodes.html</code>, <code>control_worksheet.html</code>, <code>microbit_code_monitor.html</code>, and <code>microbit_drawing_canvas.html</code>, plus <code>prompt.md</code>. In other words, the project structure and supporting pages were still actively being shaped at the start of the day.</p>
+                </article>
+
+                <article class="commit-card">
+                    <h3>7:23 AM · “update card radius”</h3>
+                    <p>A tiny follow-up commit changed <code>string_ensemble_baton_nodes.html</code>. Even that small change matters here because it shows the same pattern as the rest of the day: make something, look again, tighten it, keep moving.</p>
+                </article>
+
+                <article class="commit-card">
+                    <h3>7:29 AM · “added more cards to index”</h3>
+                    <p>This commit added the new D, E, and F cards to the home page. Those cards are especially important for the story because they explicitly turned visitor feedback, debugging, and invention into part of the activity itself.</p>
+                </article>
+
+                <article class="commit-card">
+                    <h3>9:51 AM · “minor updates to language”</h3>
+                    <p>This commit created <code>activity_printout.html</code> and adjusted language in <code>index.html</code>. That tells us the exhibit was not only being coded for the screen, but also being interpreted for participants through printed copy and take-home framing.</p>
+                </article>
+
+                <article class="commit-card">
+                    <h3>11:02 AM · “make canvas wide”</h3>
+                    <p>The drawing page changed in a very specific way: the shell went to full width and the workspace padding got smaller. That lines up directly with the live request to make the canvas fill more of the screen.</p>
+                </article>
+
+                <article class="commit-card">
+                    <h3>11:24 AM · “changed chacters to explode and shoot with directions”</h3>
+                    <p>This was one of the biggest April 11 commits. It added aiming direction, projectile ownership, collision checks, explosion effects, respawn timing, and invulnerability logic to <code>microbit_luddy_characters.html</code>. The character page stopped being just a movement demo and started behaving like a game.</p>
+                </article>
+
+                <article class="commit-card">
+                    <h3>11:47 AM and 11:50 AM · “change canvas controls”</h3>
+                    <p>These two quick commits adjusted control mappings and refined the public-screen behavior of the pages. The same time block also transformed the character world into a beach environment, showing how visual design and controls were being tuned together in response to what people were noticing.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">After The Event</p>
+                    <h2>What changed between the last Saturday commit and Monday morning</h2>
+                </div>
+                <p>This comparison looks at <code>eeaf3b3</code> from Saturday, April 11, 2026 at 11:50:25 AM EDT and the Monday morning commits <code>082a792</code> at 9:05:03 AM EDT and <code>8571c8b</code> at 9:50:45 AM EDT on April 13, 2026.</p>
+            </div>
+
+            <div class="compare-grid">
+                <article class="compare-card">
+                    <h3>The biggest jump was the zombie page landing in code</h3>
+                    <p>The Monday 9:05 AM commit added <code>microbit_zombie_outbreak.html</code> as a brand-new page with about 1,944 inserted lines. That is the clearest evidence that a lot of the post-event thinking and local work had been carried forward and then committed later.</p>
+                    <div class="tag-row">
+                        <span class="tag">New file added</span>
+                        <span class="tag">Zombie game committed</span>
+                        <span class="tag">April 13, 9:05 AM</span>
+                    </div>
+                </article>
+
+                <article class="compare-card">
+                    <h3>The existing pages also moved beyond the 11:50 snapshot</h3>
+                    <p>Between <code>eeaf3b3</code> and Monday morning, the home page gained a zombie card and later an evolution card, the drawing page picked up a much larger pastel palette plus a wider pen-size range, and the character beach got scoring with top-score and total-pop tracking.</p>
+                    <div class="tag-row">
+                        <span class="tag">Home page expanded</span>
+                        <span class="tag">Sketch Pad tuned</span>
+                        <span class="tag">Beach scoring added</span>
+                    </div>
+                </article>
+
+                <article class="compare-card">
+                    <h3>Monday 9:50 AM was about turning it into a connected site</h3>
+                    <p>The 9:50 AM commit added the site-wide zombie nav link, introduced the new <code>techfest_evolution.html</code> page, and styled the nav so worksheet, monitor, and evolution read like a different class of destination from the main play pages.</p>
+                    <div class="tag-row">
+                        <span class="tag">Site navigation</span>
+                        <span class="tag">Evolution page added</span>
+                        <span class="tag">Utility-link styling</span>
+                    </div>
+                </article>
+
+                <article class="compare-card">
+                    <h3>What git can and cannot prove</h3>
+                    <p>The repository can prove which committed snapshots existed at those exact times. It cannot show the full local work that happened before the laptop was back and synced. The Monday commits strongly suggest that several ideas from TechFest kept being developed locally after the last Saturday commit and were only captured in git later.</p>
+                    <div class="tag-row">
+                        <span class="tag">Committed snapshots</span>
+                        <span class="tag">Local work gap</span>
+                        <span class="tag">Post-event follow-through</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">From The Room</p>
+                    <h2>Artifacts from TechFest</h2>
+                </div>
+                <p>These images help show both sides of the project: the room where kids interacted with the work, and one of the visual outcomes produced by the Sketch Pad.</p>
+            </div>
+
+            <div class="media-grid">
+                <article class="media-card">
+                    <div class="media-frame">
+                        <img src="techfest_kids_microbit.png" alt="Children at TechFest looking at the Micro:bit Exploration display on a large screen.">
+                    </div>
+                    <h3>Kids testing the station in the room</h3>
+                    <p class="media-caption">This photo makes the public-making story feel real: children are standing in front of the live display, reacting to the screen together, which is exactly the context that generated so many of the comments and ideas on April 11.</p>
+                </article>
+
+                <article class="media-card">
+                    <div class="media-frame">
+                        <img src="etch-a-sketch-2026-04-11T17-27-01-757Z.png" alt="An etch-a-sketch style example image produced from the Motion Sketch Pad page.">
+                    </div>
+                    <h3>Etch-a-sketch example from the Sketch Pad</h3>
+                    <p class="media-caption">This saved sketch shows what the Motion Sketch Pad could produce after the canvas and controls were pushed further. It is a nice artifact of the visual side of the exhibit, not just the code side.</p>
                 </article>
             </div>
         </section>
@@ -460,7 +697,7 @@
                 </article>
                 <article class="credit-card">
                     <h3>Arvin</h3>
-                    <p>Arvin, our 8-year-old helper, helped capture the update ideas during the day and contributed the idea that became the Zombie Outbreak page.</p>
+                    <p>Arvin, our 8-year-old helper, helped capture the update ideas during the day and contributed the zombie-game idea that later became the Zombie Outbreak page committed on April 13, 2026.</p>
                 </article>
                 <article class="credit-card">
                     <h3>The Build Process</h3>
@@ -470,7 +707,7 @@
         </section>
 
         <div class="footer-note">
-            This page documents a public-making process from Saturday, April 11, 2026 at Luddy TechFest: people interacted with the work, suggested changes, and the software evolved in response. That feedback loop is part of the exhibit itself.
+            This page documents a public-making process from Saturday, April 11, 2026 at Luddy TechFest: people interacted with the work, suggested changes, and the software evolved in response. The timeline above now combines the human story from the room with the repository history from April 11, 2026, and it notes where later commits carried those ideas forward.
         </div>
     </main>
 </body>
